@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Everything that does not need a graphical toolchain. Fast, and the only job
+  # that runs the behaviour tests.
+  core:
+    name: Core & platform layer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy -p zaapy-core -p zaapy-platform --all-targets -- -D warnings
+      - run: cargo test -p zaapy-core
+
+  frontend:
+    name: Settings page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run build
+
+  # The only job where the Win32 layer is actually compiled and linked. Windows
+  # is the primary target and most development happens on a Mac, so a red build
+  # here is the signal that matters.
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: cargo clippy -p zaapy-platform --all-targets -- -D warnings
+      - run: cargo build --workspace
