@@ -19,7 +19,8 @@ So the codebase is split along exactly that line.
 crates/zaapy-core/       no OS, no UI, no Tauri — the whole behaviour
 crates/zaapy-platform/   the OS, and nothing else
 src-tauri/               the application: tray, window, IPC, loop, logging
-src/                     the settings page (Svelte 5)
+src/                     the settings panel (Svelte 5)
+.github/workflows/ci.yml the only place the Win32 layer is linked, not just checked
 ```
 
 `zaapy-core` defines four traits — `ClipboardPort`, `WindowPort`, `InputPort`,
@@ -76,17 +77,20 @@ says they are.
 
 `Enter → paste → Enter` assumes the chat is closed when the command arrives. If
 it is already open, the first `Enter` closes it instead. Rather than read the
-screen to find out, the sequence is a list of steps in the configuration file —
-editable if Dofus ever behaves differently, but deliberately absent from the
-settings panel, which stays a five-setting window. The decision to add screen
-reading (open question 2 in the vision) is deferred until there is evidence it is
-needed, and `InputPort` is where a verifying implementation would slot in.
+screen to find out, the sequence is a list of steps in the configuration file,
+editable if Dofus ever behaves differently. Screen reading stays off the table
+until there is evidence in game that the chat state actually varies; `InputPort`
+is where a verifying implementation would slot in if it ever does.
 
 ## The settings panel
 
-One window, no navigation, five settings: the bridge switch, the source
-application, the Dofus window, which commands to relay, and whether to clear the
-clipboard afterwards.
+A 420×400 window, hidden at launch and opened from the tray, because in normal
+use there is nothing to look at. No navigation, five settings: the bridge switch,
+the Ganymède window, the Dofus window, which commands to relay, and whether to
+clear the clipboard afterwards. Both window pickers are dropdowns over the live
+window list; choosing a Dofus client writes its process name *and* the character
+name from its title, so the multi-client filter is implied by the pick rather
+than typed.
 
 It has no palette of its own. `src/app.css` uses CSS system colours (`Canvas`,
 `CanvasText`, `GrayText`, `AccentColor`), the platform font stack and
@@ -95,11 +99,19 @@ and the form controls stay the ones the webview already draws natively. Adding a
 brand colour or a rounded border to a control would be a step away from that, not
 towards it.
 
+Nothing is offered that cannot be acted on: `HostStatus::can_request_permission`
+exists so the panel does not show a "Grant permission…" button on a platform
+where there is nothing to grant.
+
 There is no in-app journal: the rotating log file is the record, and the panel
 links to it with a single button (`open_log_folder`, opened from Rust so the
 front end needs no filesystem capability). The cost is that a mid-send failure
 shows up only as a system notification and a log line; the status line covers the
 common case — no Dofus window open — because it is recomputed every two seconds.
+
+The send sequence and the focus timeout are deliberately absent from it: they
+live in the configuration file, reachable when Dofus misbehaves, without turning
+a five-line panel into a keystroke editor.
 
 ## Platform notes
 
@@ -110,18 +122,25 @@ result rather than trusting it. `SendInput` fails *silently* when the target is
 more privileged (UIPI), so elevation is detected up front and surfaced as a
 warning instead of being diagnosed after a session of nothing happening.
 
-**macOS.** Not implemented yet; `unsupported.rs` keeps the app running and
-honest. It will need `NSPasteboard.changeCount`, `NSWorkspace`, `AXUIElement` and
-`CGEvent`, all gated behind Accessibility permission.
+**macOS.** The ports map to `NSPasteboard.changeCount` for the clipboard,
+`NSWorkspace` for the foreground application, `AXUIElement` for window titles and
+raising — chosen over `CGWindowListCopyWindowInfo`, which would demand Screen
+Recording on top — and `CGEvent` for keystrokes. All of it is gated behind
+Accessibility permission, which is what `can_request_permission` is there to
+surface.
+
+**Anything else.** `unsupported.rs` is selected by `cfg` wherever no port module
+applies. It fails with a plain reason rather than refusing to build, so the app
+still starts, the panel still works, and a Linux CI runner can compile the crate.
 
 ## Verification
 
 | What | How |
 |---|---|
 | Behaviour, all failure paths | `cargo test -p zaapy-core` |
-| Win32 layer, without a PC | `cargo check -p zaapy-platform --target x86_64-pc-windows-msvc` |
-| Settings page types | `bun run check` |
-| Real Windows build | CI job `windows`, or `cargo tauri build` on the PC |
+| Win32 layer, without a PC | `cargo check`/`cargo clippy -p zaapy-platform --target x86_64-pc-windows-msvc` |
+| Settings panel types | `bun run check` |
+| Win32 layer, actually linked | the `Windows build` CI job, or `bun run tauri build` on the PC |
 
 What none of that covers, and only a human at a keyboard can: that the keystrokes
 land in the Dofus chat and the character actually leaves.
