@@ -45,7 +45,8 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | Dofus target | **Manual selection** of the client window inside Zaapy — the user picks it, Zaapy remembers it |
 | Focus after send | **Stays on Dofus** — no automatic return to Ganymède |
 | Clipboard after send | **Cleared**, but only if it still holds the exact command that was just sent — never overwrite something the user copied in the meantime |
-| Interface | System tray / menu bar icon **plus** a settings window: target selection, shortcuts, and a log of sent commands |
+| Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, and a link to the log folder |
+| Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen |
 | Failures | **System notification** with a clear cause (e.g. "Dofus window not found"); the command stays available for a manual paste |
 | Audience | **Personal use first, public later** — MVP for the author, architecture kept clean enough for a community release |
 
@@ -56,16 +57,16 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 - Broadcasting a command to several Dofus clients at once.
 - Ganymède in a browser tab — desktop app only.
 - Automatic focus return to Ganymède after sending.
+- An in-app activity journal. The rotating log file is the record, and the settings window only links to it.
 - Guide content of any kind. Zaapy has no opinion on where the user should go.
 
 ## 8. Open questions
 
-These are deliberately left undecided here and form the agenda for the technical design session:
+These are deliberately left undecided here:
 
 1. **`/zaap` support.** Announced but not yet implemented in-game. Only `/travel` works today, so the command handling must be able to accept `/zaap` later without a redesign — but the exact trigger and formatting cannot be locked in until Ankama ships it.
-2. **Chat state verification.** Should Zaapy type blind (open chat, paste, Enter) or verify on screen that the chat is actually open before sending? Screen reading is more robust and more intrusive; the trade-off is unresolved.
-3. **macOS permissions.** Accessibility permission is required to focus windows and synthesize keystrokes. Its impact on first-launch experience needs a deliberate answer.
-4. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
+2. **macOS permissions.** Accessibility permission is required to focus windows and synthesize keystrokes. Its impact on first-launch experience needs a deliberate answer.
+3. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
 
 ## 9. Beyond v1 — non-committal directions
 
