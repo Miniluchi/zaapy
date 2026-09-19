@@ -1,0 +1,27 @@
+[package]
+name = "zaapy"
+description = "Bridges Ganymède travel commands into the Dofus 3 chat."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "zaapy_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+zaapy-core = { path = "../crates/zaapy-core" }
+zaapy-platform = { path = "../crates/zaapy-platform" }
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
