@@ -1,8 +1,8 @@
 //! Tracing to a rotating file, plus the console during development.
 //!
 //! The on-disk log is the diagnostic trail for failures the user only notices
-//! after the fact ("it stopped working at some point this evening"); the
-//! in-app journal is the live view.
+//! after the fact ("it stopped working at some point this evening"). There is
+//! no in-app journal: the settings panel links to this file instead.
 
 use std::path::Path;
 
