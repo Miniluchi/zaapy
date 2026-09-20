@@ -7,7 +7,12 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, Runtime as TauriRuntime};
 
-use crate::runtime::Runtime;
+use crate::runtime::{self, Runtime};
+
+/// The tray's copy of the bridge switch, kept in state so a change made in the
+/// settings page can move the check mark. Without it the two surfaces drift
+/// apart the moment either one is used.
+pub struct BridgeToggle<R: TauriRuntime>(pub CheckMenuItem<R>);
 
 pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let enabled_now = app.state::<Runtime>().config().enabled;
@@ -40,10 +45,9 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "settings" => show_settings(app),
             "enabled" => {
-                let runtime = app.state::<Runtime>();
-                let mut config = runtime.config();
+                let mut config = app.state::<Runtime>().config();
                 config.enabled = toggle.is_checked().unwrap_or(!config.enabled);
-                if let Err(error) = runtime.update_config(config) {
+                if let Err(error) = runtime::apply_config(app, config) {
                     tracing::error!(%error, "could not persist the bridge switch");
                 }
             }
@@ -54,6 +58,7 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(icon) = app.default_window_icon() {
         builder = builder.icon(icon.clone()).icon_as_template(true);
     }
+    app.manage(BridgeToggle(enabled));
     builder.build(app)?;
     Ok(())
 }

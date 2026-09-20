@@ -5,16 +5,18 @@ use tauri_plugin_opener::OpenerExt;
 use zaapy_core::platform::WindowRef;
 use zaapy_core::Config;
 
-use crate::runtime::{Runtime, Status};
+use crate::runtime::{self, Runtime, Status};
 
 #[tauri::command]
 pub fn get_config(runtime: State<'_, Runtime>) -> Config {
     runtime.config()
 }
 
+/// Routed through [`runtime::apply_config`] rather than the runtime directly, so
+/// the tray's check mark moves with the panel's.
 #[tauri::command]
-pub fn set_config(config: Config, runtime: State<'_, Runtime>) -> Result<Config, String> {
-    runtime.update_config(config)
+pub fn set_config(app: AppHandle, config: Config) -> Result<Config, String> {
+    runtime::apply_config(&app, config)
 }
 
 /// Every visible window on the machine, so the user can point at Ganymède and at

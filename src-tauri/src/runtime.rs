@@ -10,11 +10,17 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter, Manager, Runtime as TauriRuntime};
 use tauri_plugin_notification::NotificationExt;
 use zaapy_core::bridge::{self, Outcome, TickReport};
 use zaapy_core::platform::WindowRef;
 use zaapy_core::{Bridge, Config, TICK_INTERVAL_MS};
+
+use crate::tray::BridgeToggle;
+
+/// Broadcast to the settings page whenever the configuration changes, whoever
+/// changed it.
+pub const CONFIG_CHANGED: &str = "config-changed";
 
 /// Everything the settings page needs to tell the user where they stand.
 #[derive(Debug, Clone, Serialize)]
@@ -92,6 +98,28 @@ impl Runtime {
     fn tick(&self) -> Option<TickReport> {
         self.bridge.lock().unwrap().tick()
     }
+}
+
+/// The one way a configuration change reaches the whole application: the running
+/// bridge and the file on disk, the tray's check mark, and the settings page.
+///
+/// Both surfaces write through here, which is what keeps the bridge switch from
+/// reading one thing in the tray menu and another in the panel.
+pub fn apply_config<R: TauriRuntime>(app: &AppHandle<R>, config: Config) -> Result<Config, String> {
+    let saved = app.state::<Runtime>().update_config(config)?;
+
+    // Menu items may only be touched from the main thread on macOS, and a command
+    // arriving from the webview does not run on it.
+    let handle = app.clone();
+    let checked = saved.enabled;
+    let _ = app.run_on_main_thread(move || {
+        if let Some(toggle) = handle.try_state::<BridgeToggle<R>>() {
+            let _ = toggle.0.set_checked(checked);
+        }
+    });
+
+    let _ = app.emit(CONFIG_CHANGED, &saved);
+    Ok(saved)
 }
 
 /// Start the 100 ms loop. Runs until the process exits.
