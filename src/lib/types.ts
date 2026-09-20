@@ -19,10 +19,12 @@ export interface Config {
   target: TargetSelector;
   commands: { travel: boolean; zaap: boolean };
   // Not shown in the settings panel: editable in the config file if Dofus ever
-  // needs a different sequence.
+  // needs a different sequence, or a slower machine a longer wait.
   send_sequence: SendStep[];
   focus_timeout_ms: number;
+  focus_settle_ms: number;
   clear_clipboard_on_success: boolean;
+  clipboard_clear_delay_ms: number;
 }
 
 export interface WindowRef {

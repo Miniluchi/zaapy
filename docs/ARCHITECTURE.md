@@ -50,9 +50,13 @@ The host calls `Bridge::tick()` every 100 ms. Each tick:
 6. Resolves the target window by process name and title substring, refusing to
    guess when several match.
 7. Raises the window, then **confirms** it actually came forward before typing.
-8. Plays the send sequence.
-9. Empties the clipboard, but only on success and only while it still holds what
-   was just pasted.
+8. Waits for the window to settle. Being in the foreground is not being ready to
+   read input; a game just pulled out of the background drops the first frames'
+   worth of keystrokes.
+9. Plays the send sequence.
+10. Waits again, then empties the clipboard — only on success, and only while it
+    still holds what was just pasted. Keystroke injection merely *queues* the
+    events, so a clipboard emptied too eagerly is a paste of nothing.
 
 Steps 4 and 7 are the two safety properties worth protecting in any refactor:
 Zaapy never acts on a copy the user did not make in the guide, and never types
