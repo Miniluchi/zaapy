@@ -139,11 +139,20 @@ from the alpha channel alone, which would flatten the portal into a black blob.
 no MSI, which cannot install per-user without administrator rights. The `Release`
 workflow does both from a `v*` tag and opens a draft GitHub release.
 
-Neither bundle is signed. The consequence is not cosmetic on macOS: Accessibility
-permission is bound to the binary, so every new unsigned build has to be re-added
-in System Settings, and a stale entry looks granted while the bridge sends
-nothing. Signing with a Developer ID is the fix, and the only thing it would need
-is credentials in the release workflow.
+Neither bundle carries a real certificate, but the macOS one **must** still be
+signed ad-hoc (`bundle.macOS.signingIdentity: "-"`). Without it the bundler ships
+an app whose executable is merely linker-signed: `codesign --verify` answers
+"code object is not signed at all", the `Info.plist` is unbound and no resources
+are sealed. macOS still runs it, and still lists it in Privacy & Security with a
+switch the user can turn on — but `AXIsProcessTrusted` keeps answering false,
+because there is no code identity for the grant to attach to. The symptom is a
+permission the settings pane says was given and the app says was not.
+
+Ad-hoc signing fixes that, per build: the identity is the bundle's `cdhash`, so
+every new version is a new app as far as TCC is concerned and the Accessibility
+entry has to be removed and re-added. Only a Developer ID signature, which
+survives across versions, removes that step — along with the Gatekeeper warning
+and the need to notarize.
 
 ## Platform notes
 
