@@ -146,6 +146,10 @@ impl EnabledCommands {
 /// Pasting rather than typing is deliberate: the command is already in the
 /// clipboard, and it sidesteps keyboard layouts entirely (an AZERTY user typing
 /// a comma would otherwise need a different key than a QWERTY one).
+///
+/// The first step is the only one the settings panel offers: it opens the chat,
+/// and Dofus lets the player rebind that key. The closing `Enter` validates the
+/// line, which Dofus does not let them move.
 pub fn default_send_sequence() -> Vec<SendStep> {
     vec![
         SendStep::key(Key::Enter),
@@ -221,6 +225,16 @@ mod tests {
             .expect("partial config should deserialise");
         assert_eq!(config.send_sequence, default_send_sequence());
         assert!(config.enabled);
+    }
+
+    /// The settings panel edits the first key of the sequence, so the default
+    /// has to start with one — a bare key, with no modifier to silently drop.
+    #[test]
+    fn the_sequence_opens_with_the_key_the_panel_offers() {
+        assert_eq!(
+            default_send_sequence().first(),
+            Some(&SendStep::key(Key::Enter))
+        );
     }
 
     #[test]

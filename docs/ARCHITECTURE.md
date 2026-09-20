@@ -86,12 +86,20 @@ editable if Dofus ever behaves differently. Screen reading stays off the table
 until there is evidence in game that the chat state actually varies; `InputPort`
 is where a verifying implementation would slot in if it ever does.
 
+The first step is the one exception the panel makes to that: the key that opens
+the chat is a keybind Dofus lets the player move, so Zaapy has to follow it or
+type into a chat that never opened. The closing `Enter` validates the line, which
+Dofus does not let them move, and it stays fixed. The setting reads and writes
+that first step in place rather than carrying a key of its own, because the
+sequence is what actually gets played — a second copy of the same fact would
+disagree with it the moment the file is hand-edited.
+
 ## The settings panel
 
 A 420×400 window, hidden at launch and opened from the tray, because in normal
-use there is nothing to look at. No navigation, four settings: the bridge switch,
-the Ganymède window, the Dofus window, and which commands to relay. Both window
-pickers are dropdowns over the live
+use there is nothing to look at. No navigation, five settings: the bridge switch,
+the Ganymède window, the Dofus window, which commands to relay, and the key that
+opens the game's chat. Both window pickers are dropdowns over the live
 window list; choosing a Dofus client writes its process name *and* the character
 name from its title, so the multi-client filter is implied by the pick rather
 than typed.
@@ -120,9 +128,10 @@ front end needs no filesystem capability). The cost is that a mid-send failure
 shows up only as a system notification and a log line; the status line covers the
 common case — no Dofus window open — because it is recomputed every two seconds.
 
-The send sequence and the focus timeout are deliberately absent from it: they
-live in the configuration file, reachable when Dofus misbehaves, without turning
-a five-line panel into a keystroke editor.
+The rest of the send sequence and the focus timeout are deliberately absent from
+it: they live in the configuration file, reachable when Dofus misbehaves, without
+turning a five-line panel into a keystroke editor. The chat key earns its row by
+being a setting *in Dofus* — the others only ever move to work around a bug.
 
 ## The tray icon
 

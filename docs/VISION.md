@@ -46,8 +46,8 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | Dofus target | **Manual selection** of the client window inside Zaapy — the user picks it, Zaapy remembers it |
 | Focus after send | **Stays on Dofus** — no automatic return to Ganymède |
 | Clipboard after send | **Untouched** — the command stays where Ganymède put it, ready for a manual paste. Zaapy reads the clipboard to know there is something to relay, and that is the whole of its business with it |
-| Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, and a link to the log folder |
-| Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen |
+| Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, which key opens the chat, and a link to the log folder |
+| Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen. The key that opens the chat is a Dofus keybind, so the panel asks for it; the rest of the sequence is file-only |
 | Failures | **System notification** with a clear cause (e.g. "Dofus window not found"); the command stays available for a manual paste |
 | Audience | **Personal use first, public later** — MVP for the author, architecture kept clean enough for a community release |
 
