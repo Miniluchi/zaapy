@@ -37,9 +37,20 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
         ],
     )?;
 
+    // Not the application icon: that one is a square with a background, which the
+    // menu bar and the notification area both want without. Two sizes because the
+    // menu bar rescales whatever it is given to 18 pt — 36 px on a Retina display
+    // — while Windows builds the icon at its source size and lets the shell scale
+    // it down, which it does cleanly from 32 and badly from anything larger.
+    #[cfg(target_os = "macos")]
+    let icon = tauri::include_image!("icons/tray-macos.png");
+    #[cfg(not(target_os = "macos"))]
+    let icon = tauri::include_image!("icons/tray.png");
+
     let toggle = enabled.clone();
-    let mut builder = TrayIconBuilder::with_id("zaapy")
+    let builder = TrayIconBuilder::with_id("zaapy")
         .tooltip("Zaapy")
+        .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -55,9 +66,6 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
             other => tracing::debug!(id = other, "unhandled tray menu item"),
         });
 
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone()).icon_as_template(true);
-    }
     app.manage(BridgeToggle(enabled));
     builder.build(app)?;
     Ok(())
