@@ -39,6 +39,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | Area | Decision |
 |---|---|
 | Platforms | Windows **and** macOS |
+| macOS permissions | **Accessibility**, asked for from the settings window. The source gate works without it, so nothing is ever sent from an unpermitted install — the panel says what is missing instead |
 | Trigger | Fully automatic and immediate, **gated**: the command is only bridged if Ganymède was the foreground window when it appeared in the clipboard |
 | Source app | Ganymède **desktop app** (detected by process/window, no browser support) |
 | Commands relayed | `/travel` today; `/zaap` designed for but not active (see open questions) |
@@ -65,8 +66,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 These are deliberately left undecided here:
 
 1. **`/zaap` support.** Announced but not yet implemented in-game. Only `/travel` works today, so the command handling must be able to accept `/zaap` later without a redesign — but the exact trigger and formatting cannot be locked in until Ankama ships it.
-2. **macOS permissions.** Accessibility permission is required to focus windows and synthesize keystrokes. Its impact on first-launch experience needs a deliberate answer.
-3. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
+2. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
 
 ## 9. Beyond v1 — non-committal directions
 

@@ -129,9 +129,38 @@ warning instead of being diagnosed after a session of nothing happening.
 **macOS.** The ports map to `NSPasteboard.changeCount` for the clipboard,
 `NSWorkspace` for the foreground application, `AXUIElement` for window titles and
 raising — chosen over `CGWindowListCopyWindowInfo`, which would demand Screen
-Recording on top — and `CGEvent` for keystrokes. All of it is gated behind
-Accessibility permission, which is what `can_request_permission` is there to
-surface.
+Recording on top — and `CGEvent` for keystrokes. Four differences are worth
+knowing before touching the file:
+
+*A window is identified by its process id*, and an application contributes one
+row rather than one per window. macOS has no public, stable window identifier,
+and the core only ever compares `handle` against the foreground sample to confirm
+a raise — a question a pid answers exactly, since the frontmost window on macOS
+*is* the focused window of the frontmost application. The alternative was the
+private `_AXUIElementGetWindow`. The cost is a multi-window application appearing
+once in the picker; Dofus runs one process per client, so multi-account selection
+is untouched.
+
+*Only the title and the raise need Accessibility.* `foreground()` reads
+`NSWorkspace`, which needs nothing, so the source gate is honest from the first
+launch and the window picker stays populated — falling back to the application
+name — while the panel is still asking for the permission.
+
+*Raising is done twice.* `AXRaise` on the window and `activate` on the
+application: since macOS 14 the system may ignore an activation request from an
+app that is not itself active, and Zaapy runs as an accessory with no window of
+its own. Neither call is dependable alone, and the core confirms the result
+regardless.
+
+*`CGEventPost` returns nothing and drops every event silently* when the process
+is not a trusted Accessibility client — the same shape of trap as UIPI on
+Windows, so `send` asks `AXIsProcessTrusted` up front and fails with
+`PermissionDenied` instead. A chord also needs both the modifier key events and
+the flags set on the key event by hand, because a synthesised modifier press does
+not change the flags the system stamps onto what follows it.
+
+All of it is gated behind Accessibility permission, which is what
+`can_request_permission` is there to surface.
 
 **Anything else.** `unsupported.rs` is selected by `cfg` wherever no port module
 applies. It fails with a plain reason rather than refusing to build, so the app
@@ -145,6 +174,12 @@ still starts, the panel still works, and a Linux CI runner can compile the crate
 | Win32 layer, without a PC | `cargo check`/`cargo clippy -p zaapy-platform --target x86_64-pc-windows-msvc` |
 | Settings panel types | `bun run check` |
 | Win32 layer, actually linked | the `Windows build` CI job, or `bun run tauri build` on the PC |
+| macOS layer | `cargo clippy -p zaapy-platform` on a Mac, or the `macOS build` CI job |
+
+The two platform layers are not equally reachable. Windows can be type-checked
+from anywhere because its SDK ships with the toolchain; the Apple SDK does not
+travel, so `macos.rs` compiles on a Mac and on the macOS runner, and nowhere
+else. A change to it cannot be reviewed from a PC the way the reverse works.
 
 What none of that covers, and only a human at a keyboard can: that the keystrokes
 land in the Dofus chat and the character actually leaves.
