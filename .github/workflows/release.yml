@@ -23,17 +23,19 @@ jobs:
           # One DMG for both chips: an Intel Mac cannot run an Apple Silicon
           # build, and asking the user which one they have is a support burden.
           - name: macOS (universal)
+            slug: macos-universal
             runner: macos-latest
             targets: aarch64-apple-darwin,x86_64-apple-darwin
             args: --target universal-apple-darwin
           - name: Windows (x64)
+            slug: windows-x64
             runner: windows-latest
             targets: x86_64-pc-windows-msvc
             args: ""
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.targets }}
@@ -49,14 +51,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
-          # Empty on a manual run: the action then builds and uploads nothing,
-          # and the bundles come back as workflow artifacts instead.
+          # Empty on a manual run, which makes the action build and publish
+          # nothing; the step below then keeps the bundles instead.
           tagName: ${{ github.ref_type == 'tag' && 'v__VERSION__' || '' }}
           releaseName: Zaapy v__VERSION__
-          uploadWorkflowArtifacts: ${{ github.ref_type != 'tag' }}
           releaseBody: |
             Zaapy is not code signed. On macOS, right-click the app and choose
             Open the first time; on Windows, click "More info" then "Run anyway".
           # Reviewed by hand before it goes out.
           releaseDraft: true
           prerelease: false
+
+      # A GitHub release is the only place tauri-action uploads to, so without
+      # this a manual run would build both installers and throw them away.
+      - name: Keep the bundles from a manual run
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          name: zaapy-${{ matrix.slug }}
+          if-no-files-found: error
+          path: |
+            target/**/release/bundle/dmg/*.dmg
+            target/**/release/bundle/nsis/*-setup.exe
