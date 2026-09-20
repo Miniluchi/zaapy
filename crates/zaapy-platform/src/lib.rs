@@ -13,7 +13,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use zaapy_core::platform::{Clock, Ports};
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(not(any(windows, target_os = "macos")))]
 mod unsupported;
 #[cfg(windows)]
 mod win32;
@@ -21,7 +23,10 @@ mod win32;
 #[cfg(windows)]
 use win32 as sys;
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+use macos as sys;
+
+#[cfg(not(any(windows, target_os = "macos")))]
 use unsupported as sys;
 
 /// Wall-clock time, in milliseconds since the epoch.
