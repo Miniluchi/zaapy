@@ -1,0 +1,62 @@
+# Turns a version tag into installers. The version itself comes from the
+# workspace Cargo.toml — tauri.conf.json deliberately has no version field, so
+# there is one number to bump.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  # Builds the installers without publishing anything, to check the packaging
+  # before a tag is cut.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # One DMG for both chips: an Intel Mac cannot run an Apple Silicon
+          # build, and asking the user which one they have is a support burden.
+          - name: macOS (universal)
+            runner: macos-latest
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target universal-apple-darwin
+          - name: Windows (x64)
+            runner: windows-latest
+            targets: x86_64-pc-windows-msvc
+            args: ""
+
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.targets }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      # Neither bundle is signed: Zaapy has no Apple Developer ID and no
+      # Authenticode certificate, so Gatekeeper and SmartScreen both warn on
+      # first launch. The README tells the user how to get past it.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          # Empty on a manual run: the action then builds and uploads nothing,
+          # and the bundles come back as workflow artifacts instead.
+          tagName: ${{ github.ref_type == 'tag' && 'v__VERSION__' || '' }}
+          releaseName: Zaapy v__VERSION__
+          uploadWorkflowArtifacts: ${{ github.ref_type != 'tag' }}
+          releaseBody: |
+            Zaapy is not code signed. On macOS, right-click the app and choose
+            Open the first time; on Windows, click "More info" then "Run anyway".
+          # Reviewed by hand before it goes out.
+          releaseDraft: true
+          prerelease: false

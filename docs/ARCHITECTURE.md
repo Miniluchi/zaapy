@@ -96,6 +96,13 @@ window list; choosing a Dofus client writes its process name *and* the character
 name from its title, so the multi-client filter is implied by the pick rather
 than typed.
 
+The bridge switch exists twice — in the tray menu and at the top of the panel —
+so both writes go through one funnel, `runtime::apply_config`. It saves through
+`Runtime`, moves the tray's check mark (on the main thread; menus may not be
+touched from anywhere else on macOS) and emits `config-changed` to the webview,
+which the panel listens to. Either surface may be the one the user reaches for,
+and neither is allowed to show a value the other has already changed.
+
 It has no palette of its own. `src/app.css` uses CSS system colours (`Canvas`,
 `CanvasText`, `GrayText`, `AccentColor`), the platform font stack and
 `color-scheme: light dark`, so the panel follows the OS theme and accent colour
@@ -116,6 +123,27 @@ common case — no Dofus window open — because it is recomputed every two seco
 The send sequence and the focus timeout are deliberately absent from it: they
 live in the configuration file, reachable when Dofus misbehaves, without turning
 a five-line panel into a keystroke editor.
+
+## The tray icon
+
+Not the application icon: that one is a square with a background, which is right
+for the Dock and the Start menu and wrong for a menu bar. `icons/tray.png` is the
+glyph alone on transparency, at 32 px for the Windows notification area and
+128 px for a Retina menu bar, chosen by `cfg` and embedded at compile time with
+`include_image!`. It is deliberately *not* a template image: a template is drawn
+from the alpha channel alone, which would flatten the portal into a black blob.
+
+## Distribution
+
+`bun run tauri build` produces a `.dmg` on macOS and an NSIS `.exe` on Windows —
+no MSI, which cannot install per-user without administrator rights. The `Release`
+workflow does both from a `v*` tag and opens a draft GitHub release.
+
+Neither bundle is signed. The consequence is not cosmetic on macOS: Accessibility
+permission is bound to the binary, so every new unsigned build has to be re-added
+in System Settings, and a stale entry looks granted while the bridge sends
+nothing. Signing with a Developer ID is the fix, and the only thing it would need
+is credentials in the release workflow.
 
 ## Platform notes
 

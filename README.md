@@ -14,6 +14,32 @@ Accessibility API, so it needs that permission before it can raise a window or
 type into one; the settings panel asks for it and refuses to send until it has
 it.
 
+## Installing
+
+Grab the latest build from the [Releases page](https://github.com/Miniluchi/zaapy/releases):
+`Zaapy_x.y.z_x64-setup.exe` on Windows, `Zaapy_x.y.z_universal.dmg` on macOS.
+
+Neither is code signed — a certificate costs more per year than this project
+does — so both systems object the first time.
+
+**Windows.** SmartScreen says "Windows protected your PC": *More info* → *Run
+anyway*. The installer asks for no administrator rights and installs for the
+current user, and it fetches the WebView2 runtime if the machine lacks it.
+
+**macOS.** Gatekeeper refuses a double-click on an unsigned app. Right-click
+Zaapy in Applications, choose *Open*, then *Open* again in the dialog — once per
+install. From a terminal, the same thing:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Zaapy.app
+```
+
+Then grant Accessibility in System Settings → Privacy & Security →
+Accessibility: without it Zaapy can neither raise a window nor type into one.
+The grant is attached to the binary, so on updating, remove the old Zaapy entry
+with `−` and add the new one. macOS otherwise keeps showing the stale grant
+while the bridge quietly sends nothing.
+
 ## Requirements
 
 - [Rust](https://rustup.rs) (stable)
@@ -26,7 +52,7 @@ it.
 ```sh
 bun install
 bun run tauri dev      # run the app
-bun run tauri build    # produce an installer
+bun run tauri build    # produce an installer for the machine you are on
 ```
 
 Zaapy starts in the tray with its window hidden; open the settings panel from the
@@ -50,6 +76,24 @@ The Windows layer is only *linked* on a Windows machine or by the `Windows build
 CI job; the cross-target check above type-checks it from a Mac or a Linux runner.
 The macOS layer has no such shortcut — the Apple SDK does not travel — so it is
 checked on a Mac or by the `macOS build` CI job, and nowhere else.
+
+## Releasing
+
+The version lives in one place — `version` in the workspace `Cargo.toml`.
+`tauri.conf.json` has no version field of its own and inherits it.
+
+```sh
+# bump version in Cargo.toml, then
+cargo check --workspace          # refresh Cargo.lock
+git commit -am "chore: release x.y.z"
+git tag vx.y.z && git push --follow-tags
+```
+
+The tag starts the `Release` workflow, which builds a universal macOS DMG and a
+Windows installer and opens a **draft** GitHub release with both attached —
+publish it by hand. Running the same workflow from the Actions tab builds
+nothing but workflow artifacts, which is how to check the packaging without
+cutting a tag.
 
 ## Layout
 

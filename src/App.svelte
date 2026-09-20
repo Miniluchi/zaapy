@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
 
   import * as api from "./lib/api";
@@ -33,7 +34,16 @@
     // Windows open and close without telling us; the panel stays truthful by
     // re-reading the OS rather than caching a snapshot.
     const timer = setInterval(() => void refresh(), 2000);
-    return () => clearInterval(timer);
+    // The tray menu writes the same configuration this panel does. Without this
+    // the bridge switch here would keep showing whatever it was told on mount.
+    const unlisten = listen<Config>("config-changed", (event) => {
+      config = event.payload;
+      void refresh();
+    });
+    return () => {
+      clearInterval(timer);
+      void unlisten.then((stop) => stop());
+    };
   });
 
   async function load() {
@@ -143,17 +153,11 @@
         />
         /travel
       </label>
+      <!-- Left visible rather than hidden: the command is coming, and a missing
+           row reads as a missing feature. -->
       <label class="check" title="Announced by Ankama, not live in game yet">
-        <input
-          type="checkbox"
-          checked={config.commands.zaap}
-          onchange={(event) =>
-            save({
-              ...config!,
-              commands: { ...config!.commands, zaap: event.currentTarget.checked },
-            })}
-        />
-        /zaap
+        <input type="checkbox" checked={config.commands.zaap} disabled />
+        /zaap <span class="hint">soon</span>
       </label>
     </div>
 

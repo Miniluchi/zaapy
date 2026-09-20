@@ -7,7 +7,12 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, Runtime as TauriRuntime};
 
-use crate::runtime::Runtime;
+use crate::runtime::{self, Runtime};
+
+/// The tray's copy of the bridge switch, kept in state so a change made in the
+/// settings page can move the check mark. Without it the two surfaces drift
+/// apart the moment either one is used.
+pub struct BridgeToggle<R: TauriRuntime>(pub CheckMenuItem<R>);
 
 pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let enabled_now = app.state::<Runtime>().config().enabled;
@@ -32,18 +37,28 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
         ],
     )?;
 
+    // Not the application icon: that one is a square with a background, which the
+    // menu bar and the notification area both want without. Two sizes because the
+    // menu bar rescales whatever it is given to 18 pt — 36 px on a Retina display
+    // — while Windows builds the icon at its source size and lets the shell scale
+    // it down, which it does cleanly from 32 and badly from anything larger.
+    #[cfg(target_os = "macos")]
+    let icon = tauri::include_image!("icons/tray-macos.png");
+    #[cfg(not(target_os = "macos"))]
+    let icon = tauri::include_image!("icons/tray.png");
+
     let toggle = enabled.clone();
-    let mut builder = TrayIconBuilder::with_id("zaapy")
+    let builder = TrayIconBuilder::with_id("zaapy")
         .tooltip("Zaapy")
+        .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "settings" => show_settings(app),
             "enabled" => {
-                let runtime = app.state::<Runtime>();
-                let mut config = runtime.config();
+                let mut config = app.state::<Runtime>().config();
                 config.enabled = toggle.is_checked().unwrap_or(!config.enabled);
-                if let Err(error) = runtime.update_config(config) {
+                if let Err(error) = runtime::apply_config(app, config) {
                     tracing::error!(%error, "could not persist the bridge switch");
                 }
             }
@@ -51,9 +66,7 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
             other => tracing::debug!(id = other, "unhandled tray menu item"),
         });
 
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone()).icon_as_template(true);
-    }
+    app.manage(BridgeToggle(enabled));
     builder.build(app)?;
     Ok(())
 }

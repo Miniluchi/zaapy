@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Zaapy",
-  "version": "0.1.0",
   "identifier": "dev.miniluchi.zaapy",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -30,7 +29,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "nsis"],
+    "publisher": "Miniluchi",
+    "copyright": "© 2026 Miniluchi",
+    "category": "Utility",
+    "shortDescription": "Ganymède travel commands, typed into Dofus 3 for you.",
+    "longDescription": "Ganymède copies /travel x,y to the clipboard when you click a coordinate in a guide. Zaapy sits in the tray, notices it, raises the Dofus client you picked and types the command into its chat. It only reacts to a command copied while Ganymède was in front, and never types into a window it has not confirmed is in the foreground.",
+    "licenseFile": "../LICENSE",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,6 +45,17 @@
     ],
     "macOS": {
       "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "languages": ["English", "French"],
+        "displayLanguageSelector": true
+      }
     }
   }
 }
