@@ -1,124 +1,157 @@
 # Zaapy
 
-A click on a position in a Ganymède guide becomes an automatic travel in Dofus 3.
+**Click a position in a Ganymède guide, and your character travels there in
+Dofus 3. No copy-paste, no switching windows.**
 
-Ganymède already copies `/travel x,y` to the clipboard when you click a
-coordinate. Zaapy sits in the tray, notices it, raises the Dofus client you
-selected and types the command into its chat — so you never leave the guide to
-paste it yourself. It only reacts when the command was copied while Ganymède was
-in front, and never types into a window it has not confirmed is in the
-foreground. Your clipboard is only ever read: the command stays there afterwards.
+<p align="center">
+  <img src="assets/icon-1024.png" width="128" alt="Zaapy">
+</p>
 
-Opening the chat means pressing the key Dofus binds to it, `Enter` out of the
-box. If you moved that keybind in game, set the same key under **Chat key** in
-the settings panel — otherwise the command is typed into a chat that never
-opened.
+## What it does
 
-Windows and macOS are both supported. On macOS the bridge is built on the
-Accessibility API, so it needs that permission before it can raise a window or
-type into one; the settings panel asks for it and refuses to send until it has
-it.
+When you click a coordinate in a Ganymède guide, Ganymède copies `/travel x,y`
+to your clipboard. Normally you would then switch to Dofus, open the chat,
+paste, press Enter, and switch back.
 
-## Installing
+Zaapy does that part for you. It runs quietly in the background and, the moment
+Ganymède copies a travel command, it brings your Dofus client to the front and
+types the command into the chat. Your character leaves, and you never looked
+away from the guide.
 
-Grab the latest build from the [Releases page](https://github.com/Miniluchi/zaapy/releases):
-`Zaapy_x.y.z_x64-setup.exe` on Windows, `Zaapy_x.y.z_universal.dmg` on macOS.
+Works on **Windows** and **macOS**.
 
-Neither is code signed — a certificate costs more per year than this project
-does — so both systems object the first time.
+## Install
 
-**Windows.** SmartScreen says "Windows protected your PC": *More info* → *Run
-anyway*. The installer asks for no administrator rights and installs for the
-current user, and it fetches the WebView2 runtime if the machine lacks it.
+Download the latest version from the
+[Releases page](https://github.com/Miniluchi/zaapy/releases):
 
-**macOS.** Gatekeeper refuses a double-click on an unsigned app. Right-click
-Zaapy in Applications, choose *Open*, then *Open* again in the dialog — once per
-install. From a terminal, the same thing:
+| System | File |
+|---|---|
+| Windows | `Zaapy_1.0.0_x64-setup.exe` |
+| macOS | `Zaapy_1.0.0_universal.dmg` (Intel and Apple Silicon) |
 
-```sh
-xattr -dr com.apple.quarantine /Applications/Zaapy.app
-```
+Zaapy is not code signed — the certificates cost more per year than this free
+project does — so both systems will warn you the first time. Here is how to get
+past it.
 
-Then grant Accessibility in System Settings → Privacy & Security →
-Accessibility: without it Zaapy can neither raise a window nor type into one.
+### Windows
 
-The grant is attached to this exact build, so **after updating, remove the old
-Zaapy entry with `−`, then relaunch and grant it again**. Adding the new copy on
-top of the old entry is not enough: macOS goes on showing a switch that is
-already on while Zaapy still reports the permission as missing.
+1. Run the installer. Windows shows a blue **"Windows protected your PC"**
+   screen.
+2. Click **More info**, then **Run anyway**.
+3. The installer needs no administrator rights and installs just for you. If
+   your PC is missing the WebView2 runtime, it downloads it automatically.
 
-## Requirements
+### macOS
 
-- [Rust](https://rustup.rs) (stable)
-- [Bun](https://bun.sh)
-- On Windows: Visual Studio Build Tools (MSVC) and the WebView2 runtime
-- On macOS: the Xcode Command Line Tools, and Accessibility permission for Zaapy
+1. Open the `.dmg` and drag Zaapy into **Applications**.
+2. **Do not double-click it.** Right-click Zaapy in Applications, choose
+   **Open**, then **Open** again in the dialog. You only need to do this once.
+3. Zaapy needs permission to control other windows. Open its settings from the
+   menu bar icon and click **Grant permission…**, then allow Zaapy in the dialog
+   macOS shows.
+4. If no dialog appears — macOS only asks once — turn Zaapy on by hand in
+   **System Settings → Privacy & Security → Accessibility**.
 
-## Running it
+Without that permission Zaapy cannot bring up your Dofus window or type into it,
+and it will tell you so in its settings rather than failing silently.
 
-```sh
-bun install
-bun run tauri dev      # run the app
-bun run tauri build    # produce an installer for the machine you are on
-```
+> **When you update Zaapy on macOS**, remove the old Zaapy entry from the
+> Accessibility list with the **−** button first, then relaunch Zaapy and add it
+> again. Leaving the old entry in place looks like it works — the switch is
+> still on — but Zaapy will keep saying the permission is missing.
 
-Zaapy starts in the tray with its window hidden; open the settings panel from the
-tray icon.
+## First launch
 
-On macOS, expect to grant Accessibility again after a rebuild: the permission is
-attached to the binary, and `tauri dev` produces a new one each time. `tauri
-build` gives you an app bundle that keeps the grant — and is also the only way to
-see the failure notifications, which need a bundled app.
+Zaapy has no main window. It lives in your **menu bar** (macOS) or **system
+tray** (Windows), next to the clock. Click its icon and choose **Settings…**.
 
-## Checks
+There are four things to set:
 
-```sh
-cargo test -p zaapy-core                                        # behaviour, every failure path
-cargo check -p zaapy-platform --target x86_64-pc-windows-msvc   # the Win32 layer, from any OS
-cargo clippy -p zaapy-platform                                  # the macOS layer, on a Mac only
-bun run check                                                   # settings panel types
-```
+1. **Bridge enabled** — the master switch. Leave it on.
+2. **Ganymède window** — pick Ganymède in the list. Zaapy will only react to
+   commands copied while this app is in front.
+3. **Dofus window** — pick the client you want the commands sent to. Running
+   several accounts? Pick the character you are currently following the guide
+   with; you can change it any time.
+4. **Dofus chat key** — the key that opens the chat in Dofus. This is **Enter**
+   unless you changed it in the game's controls. If you did change it, click the
+   button and press your key.
 
-The Windows layer is only *linked* on a Windows machine or by the `Windows build`
-CI job; the cross-target check above type-checks it from a Mac or a Linux runner.
-The macOS layer has no such shortcut — the Apple SDK does not travel — so it is
-checked on a Mac or by the `macOS build` CI job, and nowhere else.
+That's it. Close the window — Zaapy keeps running in the tray.
 
-## Releasing
+> Ganymède must be the **desktop app**. Zaapy cannot see Ganymède running in a
+> browser tab.
 
-The version lives in one place — `version` in the workspace `Cargo.toml`.
-`tauri.conf.json` has no version field of its own and inherits it.
+## Using it
 
-```sh
-# bump version in Cargo.toml, then
-cargo check --workspace          # refresh Cargo.lock
-git commit -am "chore: release x.y.z"
-git tag vx.y.z && git push --follow-tags
-```
+Follow your guide as usual and click a position. Zaapy takes over from there.
 
-The tag starts the `Release` workflow, which builds a universal macOS DMG and a
-Windows installer and opens a **draft** GitHub release with both attached —
-publish it by hand. Running the same workflow from the Actions tab builds
-nothing but workflow artifacts, which is how to check the packaging without
-cutting a tag.
+A green line in the settings window tells you which character commands are
+currently going to. When something goes wrong — your Dofus client is closed, for
+example — Zaapy shows a system notification saying why. The command stays in your
+clipboard, so you can always paste it yourself.
 
-## Layout
+`/zaap` is greyed out for now. Ankama has announced the command but it does not
+exist in the game yet; Zaapy will support it when it ships.
 
-```
-crates/zaapy-core/       the whole behaviour, behind four platform traits
-crates/zaapy-platform/   the operating system, and nothing else
-src-tauri/               tray, window, IPC, the 100 ms loop, logging
-src/                     the settings panel (Svelte 5)
-```
+## If nothing happens
 
-## Documentation
+Work down this list — it is roughly in order of likelihood.
 
-- [docs/VISION.md](docs/VISION.md) — what the product is and what it deliberately is not
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it is built, and why it is split that way
+**Check the settings window first.** It shows a status line under the master
+switch, and it is usually the answer.
 
-## Compliance
+- **"Select the Ganymède and Dofus windows below."** — one of the two pickers is
+  still empty.
+- **No window matching the selected Dofus client is open.** — the client you
+  picked was closed, or you logged in on a different character. Pick it again.
+- **Several windows match** — you are running more than one client with similar
+  titles. Pick the specific one from the list again.
 
-Zaapy reproduces a keystroke you would otherwise type yourself, triggered by a
-click you just made. It does not read game memory and does not control your
-character beyond delivering a chat command. Whether that is acceptable under
-Ankama's terms of service is your call, not a guarantee this project makes.
+**The command appears in the chat but nothing travels.** Your chat key is
+probably wrong, so the first keypress did something other than open the chat.
+Check **Dofus chat key** against the keybind in the game's controls.
+
+**Nothing happens at all, and no notification appears.**
+
+- Make sure you clicked the coordinate **inside Ganymède**. Zaapy deliberately
+  ignores anything copied while another app is in front — that is what keeps it
+  from reacting to your own copy-pasting.
+- On macOS, re-check the Accessibility permission, especially after an update
+  (see the note above).
+- On Windows, if Dofus is running as administrator and Zaapy is not, Windows
+  silently discards the keystrokes. Zaapy warns you about this in its settings;
+  restart Zaapy as administrator too.
+
+**Still stuck?** The settings window has an **Open log folder** button. The log
+records what Zaapy did and why, and it is the right thing to attach if you
+[open an issue](https://github.com/Miniluchi/zaapy/issues).
+
+## Your clipboard and your privacy
+
+- Zaapy **only reads** your clipboard. It never changes it or clears it — after a
+  send, the command is still there for you to paste manually.
+- It only acts on a command you just copied **in Ganymède**. Anything you copy
+  anywhere else is ignored.
+- It never types into a window without first confirming that window is actually
+  in front.
+- Nothing is sent anywhere. Zaapy has no account, no server and no telemetry; it
+  only ever talks to your own clipboard, windows and keyboard.
+
+## Is this allowed?
+
+Zaapy types a keystroke you would otherwise type yourself, in direct response to
+a click you just made. It does not read game memory, does not play for you, and
+does not control your character beyond delivering one chat command.
+
+Whether that is acceptable under Ankama's terms of service is your call. This
+project makes no guarantee about it.
+
+## Licence and source
+
+Zaapy is free and open source under the [MIT licence](LICENSE).
+
+- [Contributing and building from source](docs/DEVELOPMENT.md)
+- [What the product is, and what it deliberately is not](docs/VISION.md)
+- [How it is built](docs/ARCHITECTURE.md)
