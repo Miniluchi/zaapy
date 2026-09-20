@@ -50,6 +50,52 @@ src-tauri/               tray, window, IPC, the 100 ms loop, logging
 src/                     the settings panel (Svelte 5)
 ```
 
+## Icons
+
+The masters live in `assets/` and everything in `src-tauri/icons/` is generated
+from them. The artwork comes out of [IconKitchen](https://icon.kitchen); the
+three masters are taken from its output folder:
+
+| Master | From IconKitchen | What it is |
+|---|---|---|
+| `assets/icon-1024.png` | `ios/AppIcon~ios-marketing.png` | the square, full-bleed app icon |
+| `assets/icon-macos-1024.png` | `macos/AppIcon1024.png` | the same art in the macOS rounded-square shape, with its margin |
+| `assets/tray-source.png` | `android/res/mipmap-xxxhdpi/ic_launcher_foreground.png`, cropped to the glyph | the portal alone on transparency |
+
+Two masters rather than one because the platforms want different shapes: Windows
+draws the icon square and unmodified, while macOS expects the app to supply the
+rounded square itself. The tray needs a third, since the menu bar and the
+notification area both want the glyph without a background — see
+[ARCHITECTURE.md](ARCHITECTURE.md#the-tray-icon) for why it is not a template
+image.
+
+To regenerate after new artwork:
+
+```sh
+# the square set, plus a multi-size .ico — overwrites src-tauri/icons
+bun run tauri icon assets/icon-1024.png
+
+# the tray, at the two sizes tray.rs embeds
+sips -Z 128 assets/tray-source.png --out src-tauri/icons/tray-macos.png
+sips -Z 32  assets/tray-source.png --out src-tauri/icons/tray.png
+```
+
+`tauri icon` also writes `Square*Logo.png`, `android/` and `ios/` files that this
+project does not use; delete them rather than committing them.
+
+The macOS `.icns` is the one file it must *not* produce, because it would build
+it from the square master and lose the rounded shape. Take IconKitchen's
+`macos/AppIcon.icns` instead — but note it ships only eight of the ten slots,
+omitting `icon_16x16` and `icon_32x32`, which are what a non-Retina display
+uses. Fill them in before packaging:
+
+```sh
+iconutil -c iconset -o /tmp/zaapy.iconset macos/AppIcon.icns
+sips -Z 16 assets/icon-macos-1024.png --out /tmp/zaapy.iconset/icon_16x16.png
+sips -Z 32 assets/icon-macos-1024.png --out /tmp/zaapy.iconset/icon_32x32.png
+iconutil -c icns -o src-tauri/icons/icon.icns /tmp/zaapy.iconset
+```
+
 ## Releasing
 
 The version lives in one place — `version` in the workspace `Cargo.toml`.
