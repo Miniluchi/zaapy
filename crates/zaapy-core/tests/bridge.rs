@@ -330,6 +330,35 @@ fn refused_keystrokes_surface_as_a_failure_the_user_can_act_on() {
     assert_eq!(rig.clipboard.clears(), 0);
 }
 
+/// The ungranted-Accessibility case on macOS: the OS refuses outright rather
+/// than letting the keystrokes vanish, and the user is told what to grant.
+#[test]
+fn a_denied_permission_surfaces_as_a_failure_the_user_can_act_on() {
+    let (rig, mut bridge) = armed(config());
+    rig.input.fail_with(PlatformError::PermissionDenied {
+        detail: "Accessibility".to_string(),
+    });
+
+    rig.clipboard.copy("/travel 1,2");
+    let report = bridge.tick().unwrap();
+
+    let Outcome::Failed {
+        error: BridgeError::InputFailed { detail },
+        ..
+    } = &report.outcome
+    else {
+        panic!("expected a failed send, got {:?}", report.outcome);
+    };
+    // What the OS refused has to reach the notification, or the user is left
+    // with a bridge that looks healthy and does nothing.
+    assert!(detail.contains("permission denied"), "{detail}");
+    assert!(detail.contains("Accessibility"), "{detail}");
+    assert!(report.outcome.should_notify());
+    // The command stays in the clipboard, so the user can still paste it by hand.
+    assert_eq!(rig.clipboard.clears(), 0);
+    assert_eq!(rig.clipboard.text().as_deref(), Some("/travel 1,2"));
+}
+
 #[test]
 fn whatever_sat_in_the_clipboard_at_startup_is_never_replayed() {
     let rig = MockRig::new(windows());

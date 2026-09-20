@@ -1,13 +1,8 @@
 //! The fallback for every platform whose bridge has not been written yet.
 //!
-//! Today that means macOS, which is next in line: it will use
-//! `NSPasteboard.changeCount` for the clipboard, `NSWorkspace` and the
-//! Accessibility API (`AXUIElement`) for window titles and raising, and
-//! `CGEvent` for keystrokes — none of which work until the user grants
-//! Accessibility permission, so [`host_status`] is where that will be reported.
-//!
-//! It also covers Linux, which keeps the crate compiling on a CI runner that has
-//! neither Windows nor a Mac.
+//! Windows and macOS both have one, so today this is Linux and whatever else
+//! the crate is pointed at. Its real job is keeping `zaapy-platform` compiling
+//! on the Ubuntu CI runner, which has neither of the two.
 //!
 //! Everything here fails honestly rather than silently: the app runs, the
 //! settings page works, and the journal says exactly why nothing was sent.

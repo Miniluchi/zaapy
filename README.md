@@ -9,14 +9,17 @@ paste it yourself. It only reacts when the command was copied while Ganymède wa
 in front, and never types into a window it has not confirmed is in the
 foreground.
 
-Windows is the platform the bridge targets first. The macOS ports go through the
-Accessibility API and are not wired up.
+Windows and macOS are both supported. On macOS the bridge is built on the
+Accessibility API, so it needs that permission before it can raise a window or
+type into one; the settings panel asks for it and refuses to send until it has
+it.
 
 ## Requirements
 
 - [Rust](https://rustup.rs) (stable)
 - [Bun](https://bun.sh)
 - On Windows: Visual Studio Build Tools (MSVC) and the WebView2 runtime
+- On macOS: the Xcode Command Line Tools, and Accessibility permission for Zaapy
 
 ## Running it
 
@@ -29,16 +32,24 @@ bun run tauri build    # produce an installer
 Zaapy starts in the tray with its window hidden; open the settings panel from the
 tray icon.
 
+On macOS, expect to grant Accessibility again after a rebuild: the permission is
+attached to the binary, and `tauri dev` produces a new one each time. `tauri
+build` gives you an app bundle that keeps the grant — and is also the only way to
+see the failure notifications, which need a bundled app.
+
 ## Checks
 
 ```sh
 cargo test -p zaapy-core                                        # behaviour, every failure path
 cargo check -p zaapy-platform --target x86_64-pc-windows-msvc   # the Win32 layer, from any OS
+cargo clippy -p zaapy-platform                                  # the macOS layer, on a Mac only
 bun run check                                                   # settings panel types
 ```
 
 The Windows layer is only *linked* on a Windows machine or by the `Windows build`
 CI job; the cross-target check above type-checks it from a Mac or a Linux runner.
+The macOS layer has no such shortcut — the Apple SDK does not travel — so it is
+checked on a Mac or by the `macOS build` CI job, and nowhere else.
 
 ## Layout
 
