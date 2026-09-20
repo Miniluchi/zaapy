@@ -22,3 +22,26 @@ windows = { version = "0.62", features = [
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = [
+  "NSPasteboard",
+  "NSRunningApplication",
+  "NSWorkspace",
+] }
+objc2-application-services = { version = "0.3", features = [
+  "AXError",
+  "AXUIElement",
+] }
+objc2-core-foundation = { version = "0.3", features = [
+  "CFDictionary",
+  "CFString",
+] }
+objc2-core-graphics = { version = "0.3", features = [
+  "CGEvent",
+  "CGEventSource",
+  "CGEventTypes",
+  "CGRemoteOperation",
+] }
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL"] }
