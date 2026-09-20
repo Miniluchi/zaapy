@@ -55,6 +55,7 @@ fn a_click_in_ganymede_reaches_the_game() {
         Outcome::Sent {
             command: "/travel 1,2".to_string(),
             target_title: "Miniluchi - Dofus 3.0".to_string(),
+            clipboard_cleared: true,
         }
     );
     assert_eq!(rig.windows.focus_calls(), vec![DOFUS]);
@@ -94,6 +95,30 @@ fn the_clipboard_is_emptied_only_after_a_successful_send() {
 
     assert_eq!(rig.clipboard.clears(), 1);
     assert_eq!(rig.clipboard.text(), None);
+}
+
+/// Emptying the clipboard is the one part of a send that can quietly not happen,
+/// so the outcome carries whether it did — the log is how the user finds out.
+#[test]
+fn a_send_reports_whether_the_clipboard_was_emptied() {
+    let (rig, mut bridge) = armed(Config {
+        clear_clipboard_on_success: false,
+        ..config()
+    });
+
+    rig.clipboard.copy("/travel 1,2");
+    let report = bridge
+        .tick()
+        .expect("the clipboard change should be handled");
+
+    assert!(matches!(
+        report.outcome,
+        Outcome::Sent {
+            clipboard_cleared: false,
+            ..
+        }
+    ));
+    assert_eq!(rig.clipboard.text().as_deref(), Some("/travel 1,2"));
 }
 
 #[test]

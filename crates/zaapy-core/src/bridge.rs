@@ -28,6 +28,11 @@ pub enum Outcome {
     Sent {
         command: String,
         target_title: String,
+        /// Whether the clipboard was emptied afterwards. `false` when the setting
+        /// is off, but also when the clear was attempted and did not take — the
+        /// clipboard had moved on, or another process held it. The send succeeded
+        /// either way, which is why this is reported rather than raised.
+        clipboard_cleared: bool,
     },
     Failed {
         command: String,
@@ -235,18 +240,20 @@ impl Bridge {
 
         // Only on success, and only while the clipboard still holds what we just
         // pasted. On failure the command stays available for a manual paste.
+        let mut clipboard_cleared = false;
         if self.config.clear_clipboard_on_success {
             // Injection only *queues* the keystrokes; the game pastes when it gets
             // round to them. Emptying the clipboard first hands it nothing.
             self.ports
                 .clock
                 .sleep_ms(self.config.clipboard_clear_delay_ms);
-            self.ports.clipboard.clear_if_matches(raw);
+            clipboard_cleared = self.ports.clipboard.clear_if_matches(raw);
         }
 
         Outcome::Sent {
             command: label,
             target_title: target.title,
+            clipboard_cleared,
         }
     }
 

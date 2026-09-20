@@ -117,10 +117,19 @@ fn handle(app: &AppHandle, report: TickReport) {
         Outcome::Sent {
             command,
             target_title,
+            clipboard_cleared,
         } => {
             // Deliberately not "delivered": all we know is that the system took
             // the keystrokes. Whether the game acted on them is unobservable.
-            tracing::info!(%command, target = %target_title, "keystrokes sent to the target")
+            //
+            // `clipboard_cleared` is worth a field of its own: emptying the
+            // clipboard is the one part of a send that can quietly not happen.
+            tracing::info!(
+                %command,
+                target = %target_title,
+                clipboard_cleared,
+                "keystrokes sent to the target"
+            )
         }
         Outcome::Failed { command, error } => {
             tracing::warn!(%command, %error, "command could not be delivered")
