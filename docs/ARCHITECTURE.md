@@ -116,7 +116,15 @@ It has no palette of its own. `src/app.css` uses CSS system colours (`Canvas`,
 `color-scheme: light dark`, so the panel follows the OS theme and accent colour
 and the form controls stay the ones the webview already draws natively. Adding a
 brand colour or a rounded border to a control would be a step away from that, not
-towards it.
+towards it. The one border the stylesheet draws is the circle around the chat
+key's `i` marker, which is a mark in a line of text rather than a control —
+`ⓘ` itself is absent from the system font on macOS and falls through to a CJK
+fallback face.
+
+Explanations too long for a label go in a native `title` tooltip, which both
+WKWebView and WebView2 render themselves: the `/zaap` row says why it is greyed
+out, and the chat key says which keybind it has to match. A tooltip nobody hovers
+is invisible, so the ones worth reading are marked.
 
 Nothing is offered that cannot be acted on: `HostStatus::can_request_permission`
 exists so the panel does not show a "Grant permission…" button on a platform

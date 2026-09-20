@@ -228,14 +228,26 @@
     </div>
 
     <!-- The key Dofus opens its chat with. Rebindable in game, so it has to be
-         rebindable here; the rest of the send sequence stays in the file. -->
+         rebindable here; the rest of the send sequence stays in the file.
+         The label alone cannot say which of the two Enters this is, nor that it
+         has to match a keybind the user set elsewhere, so the explanation goes
+         in a native tooltip — the same affordance the /zaap row already uses. -->
     <div class="row">
-      <span class="label">Chat key</span>
+      <span
+        class="label"
+        title="The key that opens the Dofus chat. Zaapy presses it before pasting the command, so it has to be the one bound in the game's controls — Enter unless you moved it."
+      >
+        Dofus chat key <span class="info" aria-hidden="true">i</span>
+      </span>
       <button onclick={() => (capturing = true)} onblur={stopCapture}>
         {capturing ? "Press a key…" : chatKeyLabel}
       </button>
+      <!-- One hint at a time: a refusal answers the press the user just made,
+           which matters more than the way out they have not asked for yet. -->
       {#if captureRefused}
         <span class="hint">Zaapy cannot send that key</span>
+      {:else if capturing}
+        <span class="hint">Escape to cancel</span>
       {/if}
     </div>
 

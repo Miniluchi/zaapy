@@ -57,11 +57,34 @@ hr {
 }
 
 .label {
-  /* Sized for "Ganymède window", the longest one, at the Windows base size;
-     wrapping it would break the single-line-per-setting rhythm. */
-  flex: 0 0 130px;
+  /* 130px fits every label at the Windows base size, "Ganymède window" included;
+     wrapping one would break the single-line-per-setting rhythm. A longer label
+     pushes its own control right rather than running under it — misaligning one
+     row is recoverable, overlapping text is not. */
+  flex: 0 0 auto;
+  min-width: 130px;
   white-space: nowrap;
   color: GrayText;
+}
+
+/* Marks a label whose tooltip is worth reading, and `cursor: help` is the only
+   thing that says so before the pointer has rested there long enough.
+   A drawn circle rather than the ⓘ glyph, which the system font lacks on macOS:
+   it falls through to a CJK fallback face and lands a differently shaped letter
+   in the middle of the label. This is a mark in a line of text, not a control
+   the OS already knows how to draw, so the border is ours to add. */
+.info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1.25em;
+  height: 1.25em;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.8em;
+  vertical-align: middle;
+  cursor: help;
 }
 
 .check {
