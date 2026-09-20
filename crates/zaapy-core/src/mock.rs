@@ -24,7 +24,6 @@ pub fn window(handle: u64, process: &str, title: &str) -> WindowRef {
 struct ClipboardState {
     sequence: u64,
     text: Option<String>,
-    clears: usize,
 }
 
 /// A clipboard whose content the test drives directly.
@@ -51,11 +50,6 @@ impl MockClipboard {
     pub fn text(&self) -> Option<String> {
         self.state.lock().unwrap().text.clone()
     }
-
-    /// How many times the bridge asked for the clipboard to be emptied.
-    pub fn clears(&self) -> usize {
-        self.state.lock().unwrap().clears
-    }
 }
 
 impl ClipboardPort for MockClipboard {
@@ -65,17 +59,6 @@ impl ClipboardPort for MockClipboard {
 
     fn read_text(&self) -> Option<String> {
         self.state.lock().unwrap().text.clone()
-    }
-
-    fn clear_if_matches(&self, expected: &str) -> bool {
-        let mut state = self.state.lock().unwrap();
-        if state.text.as_deref() != Some(expected) {
-            return false;
-        }
-        state.clears += 1;
-        state.sequence += 1;
-        state.text = None;
-        true
     }
 }
 

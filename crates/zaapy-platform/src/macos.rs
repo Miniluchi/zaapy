@@ -62,27 +62,6 @@ impl ClipboardPort for Clipboard {
     fn read_text(&self) -> Option<String> {
         pasteboard_text(&NSPasteboard::generalPasteboard())
     }
-
-    fn clear_if_matches(&self, expected: &str) -> bool {
-        // Win32 reads and empties while holding the clipboard open, so nothing
-        // can slip in between the two. `NSPasteboard` has no such lock, so the
-        // change counter stands in for one: if it moved while we were reading,
-        // the user copied something else and the clipboard is no longer ours to
-        // empty. The race is resolved towards leaving it alone, which is the
-        // only direction that cannot destroy someone's copy.
-        let pasteboard = NSPasteboard::generalPasteboard();
-        let before = pasteboard.changeCount();
-
-        if pasteboard_text(&pasteboard).as_deref() != Some(expected) {
-            return false;
-        }
-        if pasteboard.changeCount() != before {
-            return false;
-        }
-
-        pasteboard.clearContents();
-        true
-    }
 }
 
 // ------------------------------------------------------------------ windows

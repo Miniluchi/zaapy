@@ -7,7 +7,12 @@ coordinate. Zaapy sits in the tray, notices it, raises the Dofus client you
 selected and types the command into its chat — so you never leave the guide to
 paste it yourself. It only reacts when the command was copied while Ganymède was
 in front, and never types into a window it has not confirmed is in the
-foreground.
+foreground. Your clipboard is only ever read: the command stays there afterwards.
+
+Opening the chat means pressing the key Dofus binds to it, `Enter` out of the
+box. If you moved that keybind in game, set the same key under **Chat key** in
+the settings panel — otherwise the command is typed into a chat that never
+opened.
 
 Windows and macOS are both supported. On macOS the bridge is built on the
 Accessibility API, so it needs that permission before it can raise a window or

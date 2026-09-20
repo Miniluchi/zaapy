@@ -54,9 +54,9 @@ The host calls `Bridge::tick()` every 100 ms. Each tick:
    read input; a game just pulled out of the background drops the first frames'
    worth of keystrokes.
 9. Plays the send sequence.
-10. Waits again, then empties the clipboard — only on success, and only while it
-    still holds what was just pasted. Keystroke injection merely *queues* the
-    events, so a clipboard emptied too eagerly is a paste of nothing.
+
+The clipboard is never written to, only read: the command stays where Ganymède
+put it, available for a manual paste whether the send worked or not.
 
 Steps 4 and 7 are the two safety properties worth protecting in any refactor:
 Zaapy never acts on a copy the user did not make in the guide, and never types
@@ -86,15 +86,26 @@ editable if Dofus ever behaves differently. Screen reading stays off the table
 until there is evidence in game that the chat state actually varies; `InputPort`
 is where a verifying implementation would slot in if it ever does.
 
+The first step is the one exception the panel makes to that: the key that opens
+the chat is a keybind Dofus lets the player move, so Zaapy has to follow it or
+type into a chat that never opened. The closing `Enter` validates the line, which
+Dofus does not let them move, and it stays fixed. The setting reads and writes
+that first step in place rather than carrying a key of its own, because the
+sequence is what actually gets played — a second copy of the same fact would
+disagree with it the moment the file is hand-edited.
+
 ## The settings panel
 
-A 420×400 window, hidden at launch and opened from the tray, because in normal
-use there is nothing to look at. No navigation, five settings: the bridge switch,
-the Ganymède window, the Dofus window, which commands to relay, and whether to
-clear the clipboard afterwards. Both window pickers are dropdowns over the live
-window list; choosing a Dofus client writes its process name *and* the character
-name from its title, so the multi-client filter is implied by the pick rather
-than typed.
+A fixed 420×400 window, hidden at launch and opened from the tray, because in
+normal use there is nothing to look at. Not resizable: there is nothing to reveal
+by dragging an edge, and the width is load-bearing — each setting is one line,
+and the labels and hints are written to fit the space 420px leaves them.
+
+No navigation, five settings: the bridge switch, the Ganymède window, the Dofus
+window, which commands to relay, and the key that opens the game's chat. Both
+window pickers are dropdowns over the live window list; choosing a Dofus client
+writes its process name *and* the character name from its title, so the
+multi-client filter is implied by the pick rather than typed.
 
 The bridge switch exists twice — in the tray menu and at the top of the panel —
 so both writes go through one funnel, `runtime::apply_config`. It saves through
@@ -108,7 +119,15 @@ It has no palette of its own. `src/app.css` uses CSS system colours (`Canvas`,
 `color-scheme: light dark`, so the panel follows the OS theme and accent colour
 and the form controls stay the ones the webview already draws natively. Adding a
 brand colour or a rounded border to a control would be a step away from that, not
-towards it.
+towards it. The one border the stylesheet draws is the circle around the chat
+key's `i` marker, which is a mark in a line of text rather than a control —
+`ⓘ` itself is absent from the system font on macOS and falls through to a CJK
+fallback face.
+
+Explanations too long for a label go in a native `title` tooltip, which both
+WKWebView and WebView2 render themselves: the `/zaap` row says why it is greyed
+out, and the chat key says which keybind it has to match. A tooltip nobody hovers
+is invisible, so the ones worth reading are marked.
 
 Nothing is offered that cannot be acted on: `HostStatus::can_request_permission`
 exists so the panel does not show a "Grant permission…" button on a platform
@@ -120,9 +139,10 @@ front end needs no filesystem capability). The cost is that a mid-send failure
 shows up only as a system notification and a log line; the status line covers the
 common case — no Dofus window open — because it is recomputed every two seconds.
 
-The send sequence and the focus timeout are deliberately absent from it: they
-live in the configuration file, reachable when Dofus misbehaves, without turning
-a five-line panel into a keystroke editor.
+The rest of the send sequence and the focus timeout are deliberately absent from
+it: they live in the configuration file, reachable when Dofus misbehaves, without
+turning a five-line panel into a keystroke editor. The chat key earns its row by
+being a setting *in Dofus* — the others only ever move to work around a bug.
 
 ## The tray icon
 

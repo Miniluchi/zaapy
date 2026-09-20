@@ -24,7 +24,7 @@ use windows::core::PWSTR;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HGLOBAL, HWND, LPARAM};
 use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
 use windows::Win32::System::DataExchange::{
-    CloseClipboard, EmptyClipboard, GetClipboardData, GetClipboardSequenceNumber, OpenClipboard,
+    CloseClipboard, GetClipboardData, GetClipboardSequenceNumber, OpenClipboard,
 };
 use windows::Win32::System::Memory::{GlobalLock, GlobalUnlock};
 use windows::Win32::System::Ole::CF_UNICODETEXT;
@@ -113,18 +113,6 @@ impl ClipboardPort for Clipboard {
 
     fn read_text(&self) -> Option<String> {
         with_clipboard(read_unicode_text).flatten()
-    }
-
-    fn clear_if_matches(&self, expected: &str) -> bool {
-        // Read and empty under a single lock, so nothing can be copied in
-        // between and lost.
-        with_clipboard(|| unsafe {
-            if read_unicode_text().as_deref() != Some(expected) {
-                return false;
-            }
-            EmptyClipboard().is_ok()
-        })
-        .unwrap_or(false)
     }
 }
 

@@ -25,10 +25,6 @@ impl ClipboardPort for Clipboard {
     fn read_text(&self) -> Option<String> {
         None
     }
-
-    fn clear_if_matches(&self, _expected: &str) -> bool {
-        false
-    }
 }
 
 pub struct Windows;

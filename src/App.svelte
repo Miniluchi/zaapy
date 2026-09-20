@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
 
   import * as api from "./lib/api";
+  import { chatOpenKey, withChatOpenKey } from "./lib/types";
   import type { Config, Status, WindowRef } from "./lib/types";
 
   // Only used to pick the platform's base metrics; everything else comes from
@@ -12,6 +13,10 @@
   let config = $state<Config | null>(null);
   let status = $state<Status | null>(null);
   let windows = $state<WindowRef[]>([]);
+  /// True while the chat-key button is waiting for the user to press a key.
+  let capturing = $state(false);
+  /// Set when the captured key is one Zaapy cannot play, so the button can say so.
+  let captureRefused = $state(false);
 
   /// One entry per application, not per window: the source is an app.
   const sourceOptions = $derived([
@@ -22,6 +27,8 @@
   const sourceIsRunning = $derived(
     selectedSource === "" || sourceOptions.some((w) => w.process === selectedSource),
   );
+
+  const chatKeyLabel = $derived(keyLabel(config ? chatOpenKey(config) : null));
 
   const targetLabel = $derived(
     config?.target.title_pattern
@@ -60,6 +67,63 @@
     await refresh();
   }
 
+  /// The core's key names, as the user reads them: `enter` → `Enter`, `v` → `V`.
+  function keyLabel(key: string | null): string {
+    if (!key) return "—";
+    return key.length === 1 ? key.toUpperCase() : key[0].toUpperCase() + key.slice(1);
+  }
+
+  /// A browser key event as the core spells it, or `null` for a key Zaapy has no
+  /// code for on both platforms.
+  function coreKey(event: KeyboardEvent): string | null {
+    // A chord would need modifiers in the step; the chat bind is a single key.
+    if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return null;
+    switch (event.key) {
+      case "Enter":
+        return "enter";
+      case "Tab":
+        return "tab";
+      case " ":
+        return "space";
+      case "Backspace":
+        return "backspace";
+      case "Delete":
+        return "delete";
+      default:
+        return /^[a-z0-9]$/i.test(event.key) ? event.key.toLowerCase() : null;
+    }
+  }
+
+  function capture(event: KeyboardEvent) {
+    if (!capturing || !config) return;
+    // Let go of a held modifier without ending the capture: the user is still
+    // reaching for the key.
+    if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+
+    // Tab would move the focus and Space would press the button again, so every
+    // key the capture sees is ours, refused ones included.
+    event.preventDefault();
+    // Escape is the way out rather than a binding: it opens the game menu in
+    // Dofus, so it is never the chat key, and a capture with no exit is a trap.
+    if (event.key === "Escape") {
+      stopCapture();
+      return;
+    }
+
+    const key = coreKey(event);
+    if (!key) {
+      captureRefused = true;
+      return;
+    }
+    stopCapture();
+    void save(withChatOpenKey(config, key));
+  }
+
+  function stopCapture() {
+    capturing = false;
+    captureRefused = false;
+  }
+
   function pickSource(process: string) {
     if (!config) return;
     void save({ ...config, source_processes: process ? [process] : [] });
@@ -78,6 +142,8 @@
     });
   }
 </script>
+
+<svelte:window onkeydown={capture} />
 
 <main data-platform={platform}>
   {#if config && status}
@@ -161,17 +227,34 @@
       </label>
     </div>
 
-    <hr />
-
-    <label class="check">
-      <input
-        type="checkbox"
-        checked={config.clear_clipboard_on_success}
-        onchange={(event) =>
-          save({ ...config!, clear_clipboard_on_success: event.currentTarget.checked })}
-      />
-      Clear the clipboard after sending
-    </label>
+    <!-- The key Dofus opens its chat with. Rebindable in game, so it has to be
+         rebindable here; the rest of the send sequence stays in the file.
+         The label alone cannot say which of the two Enters this is, nor that it
+         has to match a keybind the user set elsewhere, so the explanation goes
+         in a native tooltip — the same affordance the /zaap row already uses. -->
+    <div class="row">
+      <span
+        class="label"
+        title="The key that opens the Dofus chat. Zaapy presses it before pasting the command, so it has to be the one bound in the game's controls — Enter unless you moved it."
+      >
+        Dofus chat key <span class="info" aria-hidden="true">i</span>
+      </span>
+      <button onclick={() => (capturing = true)} onblur={stopCapture}>
+        {capturing ? "Press a key…" : chatKeyLabel}
+      </button>
+      <!-- One hint at a time: a refusal answers the press the user just made,
+           which matters more than the way out they have not asked for yet.
+           Both are short enough to sit beside the button on one line, at either
+           platform's base size — the row is 130px of label plus a button wide
+           inside a 420px window, and what is left is not much. -->
+      {#if captureRefused}
+        <span class="hint" title="Zaapy can send Enter, Escape, Tab, Space, Backspace, Delete, and any letter or digit. It has no key code for the rest on both Windows and macOS.">
+          Unsupported key
+        </span>
+      {:else if capturing}
+        <span class="hint">Escape to cancel</span>
+      {/if}
+    </div>
 
     <hr />
 

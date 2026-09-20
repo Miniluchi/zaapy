@@ -194,14 +194,11 @@ impl Bridge {
         }
         self.last_attempt = Some((raw.clone(), now));
 
-        let outcome = self.deliver(&raw, &command);
-        // Clearing the clipboard bumps the sequence number; resync so the next
-        // tick does not report our own cleanup as a clipboard change.
-        self.last_sequence = Some(self.ports.clipboard.sequence());
+        let outcome = self.deliver(&command);
         self.report(outcome)
     }
 
-    fn deliver(&self, raw: &str, command: &GameCommand) -> Outcome {
+    fn deliver(&self, command: &GameCommand) -> Outcome {
         let label = command.canonical();
 
         let target = match self.resolve_target() {
@@ -231,17 +228,6 @@ impl Bridge {
                 command: label,
                 error: input_failed(error),
             };
-        }
-
-        // Only on success, and only while the clipboard still holds what we just
-        // pasted. On failure the command stays available for a manual paste.
-        if self.config.clear_clipboard_on_success {
-            // Injection only *queues* the keystrokes; the game pastes when it gets
-            // round to them. Emptying the clipboard first hands it nothing.
-            self.ports
-                .clock
-                .sleep_ms(self.config.clipboard_clear_delay_ms);
-            self.ports.clipboard.clear_if_matches(raw);
         }
 
         Outcome::Sent {
