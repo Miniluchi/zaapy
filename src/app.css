@@ -70,6 +70,17 @@ hr {
   gap: 6px;
 }
 
+/* A setting that exists but cannot be acted on yet. Greying the whole label,
+   not just the box, is what makes it read as unavailable rather than merely off. */
+.check:has(input:disabled) {
+  color: GrayText;
+}
+
+.hint {
+  color: GrayText;
+  font-size: 0.85em;
+}
+
 /* Leave the controls entirely to the platform — no radius, border or shadow of
    our own, because the OS already drew them. */
 select {

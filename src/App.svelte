@@ -153,17 +153,11 @@
         />
         /travel
       </label>
+      <!-- Left visible rather than hidden: the command is coming, and a missing
+           row reads as a missing feature. -->
       <label class="check" title="Announced by Ankama, not live in game yet">
-        <input
-          type="checkbox"
-          checked={config.commands.zaap}
-          onchange={(event) =>
-            save({
-              ...config!,
-              commands: { ...config!.commands, zaap: event.currentTarget.checked },
-            })}
-        />
-        /zaap
+        <input type="checkbox" checked={config.commands.zaap} disabled />
+        /zaap <span class="hint">soon</span>
       </label>
     </div>
 
