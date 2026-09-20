@@ -221,6 +221,11 @@ impl Bridge {
             };
         }
 
+        // Confirming the window is in front is not confirming it is ready to read
+        // input: a game just pulled out of the background drops the first frames'
+        // worth of keystrokes, and the chat never opens.
+        self.ports.clock.sleep_ms(self.config.focus_settle_ms);
+
         if let Err(error) = self.ports.input.send(&self.config.send_sequence) {
             return Outcome::Failed {
                 command: label,
@@ -231,6 +236,11 @@ impl Bridge {
         // Only on success, and only while the clipboard still holds what we just
         // pasted. On failure the command stays available for a manual paste.
         if self.config.clear_clipboard_on_success {
+            // Injection only *queues* the keystrokes; the game pastes when it gets
+            // round to them. Emptying the clipboard first hands it nothing.
+            self.ports
+                .clock
+                .sleep_ms(self.config.clipboard_clear_delay_ms);
             self.ports.clipboard.clear_if_matches(raw);
         }
 

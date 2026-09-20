@@ -1,6 +1,6 @@
 //! Windows implementation of the core ports.
 //!
-//! Three Win32 quirks shape this file:
+//! Four Win32 quirks shape this file:
 //!
 //! * The clipboard is a *shared, lockable* resource — `OpenClipboard` fails
 //!   while another process holds it, so every access retries briefly.
@@ -10,6 +10,10 @@
 //! * `SendInput` targets whatever has focus and fails *silently* when the target
 //!   is more privileged than we are (UIPI), which is why elevation is reported
 //!   up front rather than diagnosed after the fact.
+//! * A synthesised keystroke only looks real to a game if it carries a scan code
+//!   and stays down long enough to be sampled — see [`key_event`] and
+//!   [`KEY_HOLD_MS`]. A virtual key code alone drives every desktop application
+//!   and no game at all.
 
 use std::ffi::c_void;
 use std::mem::size_of;
@@ -29,8 +33,9 @@ use windows::Win32::System::Threading::{
     QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_BACK,
-    VK_CONTROL, VK_DELETE, VK_ESCAPE, VK_LWIN, VK_MENU, VK_RETURN, VK_SHIFT, VK_SPACE, VK_TAB,
+    MapVirtualKeyW, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS,
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, VIRTUAL_KEY, VK_BACK, VK_CONTROL,
+    VK_DELETE, VK_ESCAPE, VK_LWIN, VK_MENU, VK_RETURN, VK_SHIFT, VK_SPACE, VK_TAB,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW,
@@ -46,6 +51,11 @@ use crate::HostStatus;
 /// The clipboard is contended; a few short retries beat failing a travel.
 const CLIPBOARD_ATTEMPTS: u32 = 5;
 const CLIPBOARD_RETRY_MS: u64 = 10;
+
+/// How long a key stays down, and how long a modifier settles before the key it
+/// qualifies. A client that samples its input once per frame never sees a press
+/// that goes down and up inside the same frame.
+const KEY_HOLD_MS: u64 = 25;
 
 // ---------------------------------------------------------------- clipboard
 
@@ -276,23 +286,55 @@ fn modifier_key(modifier: Modifier) -> VIRTUAL_KEY {
     }
 }
 
+/// Keys Windows prefixes with `E0` on the wire. `MapVirtualKeyW` reports the bare
+/// scan code, so the flag has to be set by hand.
+fn is_extended(key: VIRTUAL_KEY) -> bool {
+    matches!(key, VK_DELETE | VK_LWIN)
+}
+
 fn key_event(key: VIRTUAL_KEY, up: bool) -> INPUT {
+    // A real keyboard reports a scan code, and a game identifies the physical key
+    // from it rather than from the virtual key — Raw Input carries nothing else.
+    // Leaving `wScan` at zero is what makes an injected keystroke drive every
+    // desktop application and no game at all. `wVk` stays filled alongside it so
+    // that consumers reading window messages see the same event.
+    //
+    // The mapping uses the calling thread's keyboard layout, which is the user's
+    // own — the same one the game reads the scan code back with.
+    let scan = unsafe { MapVirtualKeyW(key.0 as u32, MAPVK_VK_TO_VSC) } as u16;
+
+    let mut flags = KEYBD_EVENT_FLAGS::default();
+    if up {
+        flags |= KEYEVENTF_KEYUP;
+    }
+    if is_extended(key) {
+        flags |= KEYEVENTF_EXTENDEDKEY;
+    }
+
     INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
             ki: KEYBDINPUT {
                 wVk: key,
-                wScan: 0,
-                dwFlags: if up {
-                    KEYEVENTF_KEYUP
-                } else {
-                    Default::default()
-                },
+                wScan: scan,
+                dwFlags: flags,
                 time: 0,
                 dwExtraInfo: 0,
             },
         },
     }
+}
+
+fn hold() {
+    std::thread::sleep(Duration::from_millis(KEY_HOLD_MS));
+}
+
+/// Press a key, hold it, release it — each as its own batch. Sent together they
+/// reach a client polling once per frame as a key that was never down.
+fn tap(key: VIRTUAL_KEY) -> Result<(), PlatformError> {
+    dispatch(&[key_event(key, false)])?;
+    hold();
+    dispatch(&[key_event(key, true)])
 }
 
 fn dispatch(events: &[INPUT]) -> Result<(), PlatformError> {
@@ -319,15 +361,28 @@ impl InputPort for Input {
                     let held: Vec<VIRTUAL_KEY> =
                         modifiers.iter().copied().map(modifier_key).collect();
 
-                    let mut events: Vec<INPUT> =
-                        held.iter().map(|m| key_event(*m, false)).collect();
-                    events.push(key_event(key, false));
-                    events.push(key_event(key, true));
+                    let press: Vec<INPUT> = held.iter().map(|m| key_event(*m, false)).collect();
                     // Released in reverse so the chord unwinds the way a human
                     // would let go of it.
-                    events.extend(held.iter().rev().map(|m| key_event(*m, true)));
+                    let release: Vec<INPUT> =
+                        held.iter().rev().map(|m| key_event(*m, true)).collect();
 
-                    dispatch(&events)?;
+                    // The modifiers go down in their own batch, and settle, so
+                    // that the game has registered them before the key arrives.
+                    if !press.is_empty() {
+                        dispatch(&press)?;
+                        hold();
+                    }
+
+                    let tapped = tap(key);
+
+                    // Let go of the modifiers whatever happened to the key: a
+                    // Ctrl left down would follow the user around for the rest
+                    // of their session.
+                    if !release.is_empty() {
+                        let _ = dispatch(&release);
+                    }
+                    tapped?;
                 }
             }
         }

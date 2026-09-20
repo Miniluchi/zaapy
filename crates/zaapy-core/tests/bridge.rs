@@ -6,7 +6,7 @@
 use zaapy_core::bridge::{BridgeError, IgnoreReason, Outcome};
 use zaapy_core::config::{Config, TargetSelector};
 use zaapy_core::mock::{window, FocusBehaviour, MockRig};
-use zaapy_core::platform::{PlatformError, WindowRef};
+use zaapy_core::platform::{Clock, Key, PlatformError, SendStep, WindowRef};
 use zaapy_core::{Bridge, Verb};
 
 const GANYMEDE: u64 = 1;
@@ -60,6 +60,29 @@ fn a_click_in_ganymede_reaches_the_game() {
     assert_eq!(rig.windows.focus_calls(), vec![DOFUS]);
     assert_eq!(rig.input.sends().len(), 1);
     assert_eq!(rig.input.sends()[0], config().send_sequence);
+}
+
+/// The two waits that stand between a working bridge and one whose keystrokes
+/// vanish: the game is not reading input the instant its window comes forward,
+/// and it has not pasted the instant injection returns.
+#[test]
+fn the_game_is_given_time_to_open_its_chat_and_to_paste() {
+    let (rig, mut bridge) = armed(Config {
+        // A sequence with no delays of its own, so the clock measures nothing but
+        // the two waits under test.
+        send_sequence: vec![SendStep::key(Key::Enter)],
+        focus_settle_ms: 300,
+        clipboard_clear_delay_ms: 400,
+        ..config()
+    });
+
+    rig.clipboard.copy("/travel 1,2");
+    bridge
+        .tick()
+        .expect("the clipboard change should be handled");
+
+    assert_eq!(rig.clock.now_ms(), 700);
+    assert_eq!(rig.clipboard.clears(), 1);
 }
 
 #[test]
