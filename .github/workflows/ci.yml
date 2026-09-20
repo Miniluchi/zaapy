@@ -36,11 +36,32 @@ jobs:
       - run: bun run build
 
   # The only job where the Win32 layer is actually compiled and linked. Windows
-  # is the primary target and most development happens on a Mac, so a red build
-  # here is the signal that matters.
+  # is the primary target, so a red build here is the signal that matters.
+  #
+  # Its mirror image is the macOS job below, with one asymmetry: the Windows
+  # layer can be type-checked from a Mac with `--target x86_64-pc-windows-msvc`
+  # because the SDK ships with the toolchain, and the Apple SDK does not, so the
+  # macOS layer has no cross-check anywhere.
   windows:
     name: Windows build
     runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: cargo clippy -p zaapy-platform --all-targets -- -D warnings
+      - run: cargo build --workspace
+
+  # The only job where the macOS layer is compiled. Nothing else in CI can:
+  # Linux and Windows runners have no Apple SDK to check it against.
+  macos:
+    name: macOS build
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
