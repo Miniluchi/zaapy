@@ -36,9 +36,11 @@ xattr -dr com.apple.quarantine /Applications/Zaapy.app
 
 Then grant Accessibility in System Settings → Privacy & Security →
 Accessibility: without it Zaapy can neither raise a window nor type into one.
-The grant is attached to the binary, so on updating, remove the old Zaapy entry
-with `−` and add the new one. macOS otherwise keeps showing the stale grant
-while the bridge quietly sends nothing.
+
+The grant is attached to this exact build, so **after updating, remove the old
+Zaapy entry with `−`, then relaunch and grant it again**. Adding the new copy on
+top of the old entry is not enough: macOS goes on showing a switch that is
+already on while Zaapy still reports the permission as missing.
 
 ## Requirements
 
