@@ -31,7 +31,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 - **Invisible in normal use.** No window to manage, no step to remember. When it works, the user should forget it exists.
 - **Never act without a human click.** Every action Zaapy takes traces back to something the user just did in Ganymède.
 - **Fail loudly, not silently.** If the command cannot be delivered, say so immediately — a silent failure in the middle of a guide is worse than no automation at all.
-- **The clipboard belongs to the user.** Zaapy borrows it, never hijacks it.
+- **The clipboard belongs to the user.** Zaapy reads it and writes nothing back.
 - **Multi-account is explicit, never guessed.** The user says which client is the target; Zaapy does not infer it.
 
 ## 6. Scope — v1 (MVP)
@@ -45,7 +45,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | Commands relayed | `/travel` today; `/zaap` designed for but not active (see open questions) |
 | Dofus target | **Manual selection** of the client window inside Zaapy — the user picks it, Zaapy remembers it |
 | Focus after send | **Stays on Dofus** — no automatic return to Ganymède |
-| Clipboard after send | **Cleared**, but only if it still holds the exact command that was just sent — never overwrite something the user copied in the meantime |
+| Clipboard after send | **Untouched** — the command stays where Ganymède put it, ready for a manual paste. Zaapy reads the clipboard to know there is something to relay, and that is the whole of its business with it |
 | Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, and a link to the log folder |
 | Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen |
 | Failures | **System notification** with a clear cause (e.g. "Dofus window not found"); the command stays available for a manual paste |

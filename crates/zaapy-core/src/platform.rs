@@ -158,6 +158,9 @@ pub enum PlatformError {
 }
 
 /// Watching the system clipboard.
+///
+/// Read-only on purpose: the clipboard is the user's, and the command they
+/// copied stays there for them to paste by hand whatever Zaapy does with it.
 pub trait ClipboardPort: Send {
     /// A counter that changes whenever the clipboard content changes. Cheap to
     /// call; it lets the bridge poll without ever reading the actual content.
@@ -166,11 +169,6 @@ pub trait ClipboardPort: Send {
     /// The clipboard as text, or `None` when it holds something else entirely
     /// (an image, a file list) or cannot be read right now.
     fn read_text(&self) -> Option<String>;
-
-    /// Empty the clipboard, but only while it still holds `expected`. Returns
-    /// whether it was cleared. The guard is what stops Zaapy from destroying
-    /// something the user copied in the meantime.
-    fn clear_if_matches(&self, expected: &str) -> bool;
 }
 
 /// Enumerating and raising windows.

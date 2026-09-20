@@ -163,18 +163,6 @@
 
     <hr />
 
-    <label class="check">
-      <input
-        type="checkbox"
-        checked={config.clear_clipboard_on_success}
-        onchange={(event) =>
-          save({ ...config!, clear_clipboard_on_success: event.currentTarget.checked })}
-      />
-      Clear the clipboard after sending
-    </label>
-
-    <hr />
-
     <div class="row end">
       <button onclick={() => api.openLogFolder()}>Open log folder</button>
     </div>

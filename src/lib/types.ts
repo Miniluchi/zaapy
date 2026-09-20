@@ -23,8 +23,6 @@ export interface Config {
   send_sequence: SendStep[];
   focus_timeout_ms: number;
   focus_settle_ms: number;
-  clear_clipboard_on_success: boolean;
-  clipboard_clear_delay_ms: number;
 }
 
 export interface WindowRef {

@@ -16,9 +16,9 @@ pub const CONFIG_VERSION: u32 = 1;
 /// to come forward; above the ceiling the user is just staring at a frozen guide.
 const FOCUS_TIMEOUT_RANGE_MS: (u64, u64) = (100, 5_000);
 
-/// Bounds on the settle waits. A floor of zero is deliberate for both: they are
-/// margins against a game's own timing, not conditions for correctness, and a
-/// user chasing latency is allowed to take them away.
+/// Bounds on the settle wait. A floor of zero is deliberate: it is a margin
+/// against the game's own timing, not a condition for correctness, and a user
+/// chasing latency is allowed to take it away.
 const SETTLE_RANGE_MS: (u64, u64) = (0, 2_000);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,11 +39,6 @@ pub struct Config {
     /// the foreground is not the same as being ready to read input: a game that
     /// has just been activated drops the first frames' worth of keystrokes.
     pub focus_settle_ms: u64,
-    pub clear_clipboard_on_success: bool,
-    /// How long to wait after the send sequence, before emptying the clipboard.
-    /// Keystroke injection only *queues* the events; the game consumes them at
-    /// its own pace, and a clipboard emptied too early is a paste of nothing.
-    pub clipboard_clear_delay_ms: u64,
 }
 
 impl Default for Config {
@@ -57,8 +52,6 @@ impl Default for Config {
             send_sequence: default_send_sequence(),
             focus_timeout_ms: 800,
             focus_settle_ms: 200,
-            clear_clipboard_on_success: true,
-            clipboard_clear_delay_ms: 250,
         }
     }
 }
@@ -72,9 +65,6 @@ impl Config {
             .clamp(FOCUS_TIMEOUT_RANGE_MS.0, FOCUS_TIMEOUT_RANGE_MS.1);
         self.focus_settle_ms = self
             .focus_settle_ms
-            .clamp(SETTLE_RANGE_MS.0, SETTLE_RANGE_MS.1);
-        self.clipboard_clear_delay_ms = self
-            .clipboard_clear_delay_ms
             .clamp(SETTLE_RANGE_MS.0, SETTLE_RANGE_MS.1);
         if self.send_sequence.is_empty() {
             self.send_sequence = default_send_sequence();
@@ -204,7 +194,6 @@ mod tests {
         let config = Config {
             focus_timeout_ms: 10,
             focus_settle_ms: 60_000,
-            clipboard_clear_delay_ms: 60_000,
             send_sequence: Vec::new(),
             source_processes: vec!["Ganymede.exe".into(), "  ".into()],
             ..Config::default()
@@ -213,7 +202,6 @@ mod tests {
 
         assert_eq!(config.focus_timeout_ms, FOCUS_TIMEOUT_RANGE_MS.0);
         assert_eq!(config.focus_settle_ms, SETTLE_RANGE_MS.1);
-        assert_eq!(config.clipboard_clear_delay_ms, SETTLE_RANGE_MS.1);
         assert_eq!(config.send_sequence, default_send_sequence());
         assert_eq!(config.source_processes, vec!["Ganymede.exe".to_string()]);
     }

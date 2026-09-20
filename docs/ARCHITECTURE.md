@@ -54,9 +54,9 @@ The host calls `Bridge::tick()` every 100 ms. Each tick:
    read input; a game just pulled out of the background drops the first frames'
    worth of keystrokes.
 9. Plays the send sequence.
-10. Waits again, then empties the clipboard — only on success, and only while it
-    still holds what was just pasted. Keystroke injection merely *queues* the
-    events, so a clipboard emptied too eagerly is a paste of nothing.
+
+The clipboard is never written to, only read: the command stays where Ganymède
+put it, available for a manual paste whether the send worked or not.
 
 Steps 4 and 7 are the two safety properties worth protecting in any refactor:
 Zaapy never acts on a copy the user did not make in the guide, and never types
@@ -89,9 +89,9 @@ is where a verifying implementation would slot in if it ever does.
 ## The settings panel
 
 A 420×400 window, hidden at launch and opened from the tray, because in normal
-use there is nothing to look at. No navigation, five settings: the bridge switch,
-the Ganymède window, the Dofus window, which commands to relay, and whether to
-clear the clipboard afterwards. Both window pickers are dropdowns over the live
+use there is nothing to look at. No navigation, four settings: the bridge switch,
+the Ganymède window, the Dofus window, and which commands to relay. Both window
+pickers are dropdowns over the live
 window list; choosing a Dofus client writes its process name *and* the character
 name from its title, so the multi-client filter is implied by the pick rather
 than typed.

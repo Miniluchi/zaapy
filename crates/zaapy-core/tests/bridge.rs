@@ -62,17 +62,15 @@ fn a_click_in_ganymede_reaches_the_game() {
     assert_eq!(rig.input.sends()[0], config().send_sequence);
 }
 
-/// The two waits that stand between a working bridge and one whose keystrokes
-/// vanish: the game is not reading input the instant its window comes forward,
-/// and it has not pasted the instant injection returns.
+/// The wait that stands between a working bridge and one whose keystrokes
+/// vanish: the game is not reading input the instant its window comes forward.
 #[test]
-fn the_game_is_given_time_to_open_its_chat_and_to_paste() {
+fn the_game_is_given_time_to_open_its_chat() {
     let (rig, mut bridge) = armed(Config {
         // A sequence with no delays of its own, so the clock measures nothing but
-        // the two waits under test.
+        // the wait under test.
         send_sequence: vec![SendStep::key(Key::Enter)],
         focus_settle_ms: 300,
-        clipboard_clear_delay_ms: 400,
         ..config()
     });
 
@@ -81,19 +79,21 @@ fn the_game_is_given_time_to_open_its_chat_and_to_paste() {
         .tick()
         .expect("the clipboard change should be handled");
 
-    assert_eq!(rig.clock.now_ms(), 700);
-    assert_eq!(rig.clipboard.clears(), 1);
+    assert_eq!(rig.clock.now_ms(), 300);
 }
 
+/// The clipboard is the user's. Zaapy reads it to know there is something to
+/// relay, and that is the whole of its business with it — a command that was
+/// sent stays there to be pasted again by hand.
 #[test]
-fn the_clipboard_is_emptied_only_after_a_successful_send() {
+fn the_clipboard_is_left_alone_after_a_send() {
     let (rig, mut bridge) = armed(config());
 
     rig.clipboard.copy("/travel 1,2");
-    bridge.tick();
+    let report = bridge.tick().unwrap();
 
-    assert_eq!(rig.clipboard.clears(), 1);
-    assert_eq!(rig.clipboard.text(), None);
+    assert!(matches!(report.outcome, Outcome::Sent { .. }));
+    assert_eq!(rig.clipboard.text().as_deref(), Some("/travel 1,2"));
 }
 
 #[test]
@@ -113,7 +113,6 @@ fn a_failed_send_leaves_the_command_available_for_a_manual_paste() {
         }
     ));
     assert_eq!(rig.clipboard.text().as_deref(), Some("/travel 1,2"));
-    assert_eq!(rig.clipboard.clears(), 0);
 }
 
 /// The safety gate: copying a command from anywhere else must do nothing.
@@ -327,7 +326,6 @@ fn refused_keystrokes_surface_as_a_failure_the_user_can_act_on() {
         }
     ));
     assert!(report.outcome.should_notify());
-    assert_eq!(rig.clipboard.clears(), 0);
 }
 
 /// The ungranted-Accessibility case on macOS: the OS refuses outright rather
@@ -355,7 +353,6 @@ fn a_denied_permission_surfaces_as_a_failure_the_user_can_act_on() {
     assert!(detail.contains("Accessibility"), "{detail}");
     assert!(report.outcome.should_notify());
     // The command stays in the clipboard, so the user can still paste it by hand.
-    assert_eq!(rig.clipboard.clears(), 0);
     assert_eq!(rig.clipboard.text().as_deref(), Some("/travel 1,2"));
 }
 
