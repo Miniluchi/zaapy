@@ -96,13 +96,16 @@ disagree with it the moment the file is hand-edited.
 
 ## The settings panel
 
-A 420×400 window, hidden at launch and opened from the tray, because in normal
-use there is nothing to look at. No navigation, five settings: the bridge switch,
-the Ganymède window, the Dofus window, which commands to relay, and the key that
-opens the game's chat. Both window pickers are dropdowns over the live
-window list; choosing a Dofus client writes its process name *and* the character
-name from its title, so the multi-client filter is implied by the pick rather
-than typed.
+A fixed 420×400 window, hidden at launch and opened from the tray, because in
+normal use there is nothing to look at. Not resizable: there is nothing to reveal
+by dragging an edge, and the width is load-bearing — each setting is one line,
+and the labels and hints are written to fit the space 420px leaves them.
+
+No navigation, five settings: the bridge switch, the Ganymède window, the Dofus
+window, which commands to relay, and the key that opens the game's chat. Both
+window pickers are dropdowns over the live window list; choosing a Dofus client
+writes its process name *and* the character name from its title, so the
+multi-client filter is implied by the pick rather than typed.
 
 The bridge switch exists twice — in the tray menu and at the top of the panel —
 so both writes go through one funnel, `runtime::apply_config`. It saves through
