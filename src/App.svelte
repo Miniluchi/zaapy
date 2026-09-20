@@ -243,9 +243,14 @@
         {capturing ? "Press a key…" : chatKeyLabel}
       </button>
       <!-- One hint at a time: a refusal answers the press the user just made,
-           which matters more than the way out they have not asked for yet. -->
+           which matters more than the way out they have not asked for yet.
+           Both are short enough to sit beside the button on one line, at either
+           platform's base size — the row is 130px of label plus a button wide
+           inside a 420px window, and what is left is not much. -->
       {#if captureRefused}
-        <span class="hint">Zaapy cannot send that key</span>
+        <span class="hint" title="Zaapy can send Enter, Escape, Tab, Space, Backspace, Delete, and any letter or digit. It has no key code for the rest on both Windows and macOS.">
+          Unsupported key
+        </span>
       {:else if capturing}
         <span class="hint">Escape to cancel</span>
       {/if}

@@ -127,4 +127,8 @@ select {
 
 button {
   font: inherit;
+  /* A capture button that wraps changes the row's height the moment a hint
+     appears beside it, and the setting jumps under the pointer. Its label is
+     two words; it never needs a second line. */
+  white-space: nowrap;
 }
