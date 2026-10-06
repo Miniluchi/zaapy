@@ -12,9 +12,10 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime as TauriRuntime};
 use tauri_plugin_notification::NotificationExt;
-use zaapy_core::bridge::{self, Outcome, TickReport};
+use zaapy_core::bridge::{self, IgnoreReason, Outcome, TickReport};
+use zaapy_core::command::Rejection;
 use zaapy_core::platform::WindowRef;
-use zaapy_core::{Bridge, Config, TICK_INTERVAL_MS};
+use zaapy_core::{Bridge, Config, Verb, TICK_INTERVAL_MS};
 
 use crate::tray::BridgeToggle;
 
@@ -153,7 +154,12 @@ fn handle(app: &AppHandle, report: TickReport) {
         Outcome::Failed { command, error } => {
             tracing::warn!(%command, %error, "command could not be delivered")
         }
-        Outcome::Ignored { reason } => tracing::debug!(?reason, "clipboard change ignored"),
+        Outcome::Ignored { reason } if is_routine(reason) => {
+            tracing::debug!(?reason, "clipboard change ignored")
+        }
+        // A command Zaapy recognised and still did not send is what a user asks
+        // about later, so it reaches the log at the default level.
+        Outcome::Ignored { reason } => tracing::info!(?reason, "command not relayed"),
     }
 
     // Only failures interrupt the user. A working bridge is a silent one.
@@ -164,6 +170,20 @@ fn handle(app: &AppHandle, report: TickReport) {
             .title("Zaapy")
             .body(error.to_string())
             .show();
+    }
+}
+
+/// Ignores that happen on every copy the user makes outside the game: text that
+/// is not a command, and text that is only an item name somewhere else.
+fn is_routine(reason: &IgnoreReason) -> bool {
+    match reason {
+        IgnoreReason::Unparsed { reason } => {
+            matches!(reason, Rejection::Empty | Rejection::NotACommand)
+        }
+        IgnoreReason::SourceNotFocused { verb, .. } | IgnoreReason::CommandDisabled { verb } => {
+            *verb == Verb::Item
+        }
+        IgnoreReason::Duplicate | IgnoreReason::NotConfigured => false,
     }
 }
 
