@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
 
   import * as api from "./lib/api";
-  import { chatOpenKey, withChatOpenKey } from "./lib/types";
+  import { chatOpenKey, closesChat, withChatOpenKey, withCloseChat } from "./lib/types";
   import type { Config, Status, WindowRef } from "./lib/types";
 
   // Only used to pick the platform's base metrics; everything else comes from
@@ -266,6 +266,26 @@
       {:else if capturing}
         <span class="hint">Escape to cancel</span>
       {/if}
+    </div>
+
+    <!-- The tail of the send sequence, read and written in place like the chat
+         key above. Off by default: with the chat already closed, Escape opens
+         the game menu instead. -->
+    <div class="row">
+      <span
+        class="label"
+        title="Dofus keeps the chat focused after a command, so your next keystrokes land in it. Pressing Escape hands the keyboard back to the game."
+      >
+        After sending <span class="info" aria-hidden="true">i</span>
+      </span>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={closesChat(config)}
+          onchange={(event) => save(withCloseChat(config!, event.currentTarget.checked))}
+        />
+        Press Escape
+      </label>
     </div>
 
     <hr />
