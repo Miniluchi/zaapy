@@ -130,6 +130,7 @@ fn a_command_copied_outside_ganymede_is_ignored() {
         report.outcome,
         Outcome::Ignored {
             reason: IgnoreReason::SourceNotFocused {
+                verb: Verb::Travel,
                 foreground: Some("notepad.exe".to_string()),
             }
         }
@@ -208,10 +209,67 @@ fn a_command_copied_long_after_leaving_ganymede_is_ignored() {
 }
 
 #[test]
-fn ordinary_copied_text_is_ignored() {
+fn an_item_clicked_in_ganymede_is_pasted_without_opening_the_chat() {
     let (rig, mut bridge) = armed(config());
 
-    rig.clipboard.copy("rendez-vous devant le zaap");
+    rig.clipboard.copy("Bottes du Bouftou");
+    let report = bridge.tick().unwrap();
+
+    assert_eq!(
+        report.outcome,
+        Outcome::Sent {
+            command: "Bottes du Bouftou".to_string(),
+            target_title: "Miniluchi - Dofus 3.0".to_string(),
+        }
+    );
+    assert_eq!(rig.input.sends(), vec![config().paste_sequence]);
+}
+
+/// Text is pasted as is, so it gets no grace: hovering an overlay and then
+/// copying something elsewhere must not land it in the game.
+#[test]
+fn text_copied_after_leaving_ganymede_is_not_pasted() {
+    let (rig, mut bridge) = armed(config());
+    rig.windows.set_foreground(Some(EDITOR));
+    rig.clock.advance(200);
+    bridge.tick();
+
+    rig.clipboard.copy("Bottes du Bouftou");
+
+    assert!(matches!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Ignored {
+            reason: IgnoreReason::SourceNotFocused {
+                verb: Verb::Item,
+                ..
+            }
+        }
+    ));
+    assert!(rig.input.sends().is_empty());
+}
+
+#[test]
+fn items_can_be_switched_off() {
+    let mut config = config();
+    config.commands.items = false;
+    let (rig, mut bridge) = armed(config);
+
+    rig.clipboard.copy("Bottes du Bouftou");
+
+    assert_eq!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Ignored {
+            reason: IgnoreReason::CommandDisabled { verb: Verb::Item }
+        }
+    );
+    assert!(rig.input.sends().is_empty());
+}
+
+#[test]
+fn text_that_is_neither_a_command_nor_an_item_is_ignored() {
+    let (rig, mut bridge) = armed(config());
+
+    rig.clipboard.copy("12 345");
     let report = bridge.tick().unwrap();
 
     assert!(matches!(
