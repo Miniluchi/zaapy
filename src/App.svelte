@@ -225,6 +225,18 @@
         <input type="checkbox" checked={config.commands.zaap} disabled />
         /zaap <span class="hint">soon</span>
       </label>
+      <label class="check" title="An item name clicked in Ganymède is pasted into Dofus as is — into the search field you have open, without opening the chat">
+        <input
+          type="checkbox"
+          checked={config.commands.items}
+          onchange={(event) =>
+            save({
+              ...config!,
+              commands: { ...config!.commands, items: event.currentTarget.checked },
+            })}
+        />
+        Items
+      </label>
     </div>
 
     <!-- The key Dofus opens its chat with. Rebindable in game, so it has to be
