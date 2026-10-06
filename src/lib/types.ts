@@ -17,10 +17,12 @@ export interface Config {
   enabled: boolean;
   source_processes: string[];
   target: TargetSelector;
-  commands: { travel: boolean; zaap: boolean };
+  commands: { travel: boolean; zaap: boolean; items: boolean };
   // Only its first key reaches the settings panel — see `chatOpenKey`. The rest
   // is editable in the config file if Dofus ever needs a different sequence.
   send_sequence: SendStep[];
+  // What an item name gets instead: a paste, with no chat to open. File-only.
+  paste_sequence: SendStep[];
   focus_timeout_ms: number;
   focus_settle_ms: number;
 }
@@ -68,6 +70,28 @@ export function withChatOpenKey(config: Config, key: string): Config {
   // Opening the chat still has to come first, so the key goes at the front.
   if (!replaced) {
     send_sequence.unshift({ type: "key", key, modifiers: [] });
+  }
+  return { ...config, send_sequence };
+}
+
+// Whether the sequence ends by pressing Escape, which takes the keyboard back
+// from the Dofus chat once the command is in. Read from the sequence for the
+// same reason as the chat key: the sequence is what actually gets played.
+export function closesChat(config: Config): boolean {
+  const last = config.send_sequence.at(-1);
+  return last?.type === "key" && last.key === "escape" && last.modifiers.length === 0;
+}
+
+// Add or remove that closing Escape, with the pause the game needs before it —
+// the same 60 ms the default sequence leaves between its own keys.
+export function withCloseChat(config: Config, close: boolean): Config {
+  if (close === closesChat(config)) return config;
+  const send_sequence = [...config.send_sequence];
+  if (close) {
+    send_sequence.push({ type: "delay", ms: 60 }, { type: "key", key: "escape", modifiers: [] });
+  } else {
+    send_sequence.pop();
+    if (send_sequence.at(-1)?.type === "delay") send_sequence.pop();
   }
   return { ...config, send_sequence };
 }

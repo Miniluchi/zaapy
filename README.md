@@ -26,8 +26,8 @@ Download the latest version from the
 
 | System  | File                                                  |
 | ------- | ----------------------------------------------------- |
-| Windows | `Zaapy_1.0.0_x64-setup.exe`                           |
-| macOS   | `Zaapy_1.0.0_universal.dmg` (Intel and Apple Silicon) |
+| Windows | `Zaapy_1.1.0_x64-setup.exe`                           |
+| macOS   | `Zaapy_1.1.0_universal.dmg` (Intel and Apple Silicon) |
 
 Zaapy isn't code signed — the certificates cost more per year than this free
 project does — so both systems will warn you the first time.
@@ -57,6 +57,14 @@ and its settings will say so rather than failing silently.
 ## Using it
 
 Follow your guide as usual and click a position. Zaapy takes over from there.
+The arrows of Ganymède's treasure-hunt tool work the same way.
+
+Clicking an item in Ganymède pastes its name into Dofus — into the auction
+house search, say — without opening the chat. Turn it off with **Items** in the
+settings.
+
+By default the Dofus chat keeps the keyboard after a command. Tick **Press
+Escape** in the settings to hand it back to the game.
 
 `/zaap` is greyed out for now. Ankama has announced the command but it does not
 exist in the game yet; Zaapy will support it when it ships.
@@ -65,7 +73,7 @@ exist in the game yet; Zaapy will support it when it ships.
 
 - Zaapy **only reads** your clipboard, never clears or changes it — after a
   send, the command is still there to paste manually.
-- It only acts on commands copied **in Ganymède**; anything else is ignored.
+- It only acts on what you copy **in Ganymède**; anything else is ignored.
 - It never types into a window without confirming that window is in front.
 - Nothing is sent anywhere: no account, no server, no telemetry.
 

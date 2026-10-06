@@ -34,6 +34,10 @@ impl WindowPort for Windows {
         None
     }
 
+    fn under_cursor(&self) -> Option<WindowRef> {
+        None
+    }
+
     fn list_visible(&self) -> Vec<WindowRef> {
         Vec::new()
     }

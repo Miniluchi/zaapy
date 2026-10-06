@@ -42,12 +42,13 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | macOS permissions | **Accessibility**, asked for from the settings window. The source gate works without it, so nothing is ever sent from an unpermitted install — the panel says what is missing instead |
 | Trigger | Fully automatic and immediate, **gated**: the command is only bridged if Ganymède was the foreground window when it appeared in the clipboard |
 | Source app | Ganymède **desktop app** (detected by process/window, no browser support) |
-| Commands relayed | `/travel` today; `/zaap` designed for but not active (see open questions) |
+| Commands relayed | `/travel` today, from guides and from the treasure-hunt overlay; `/zaap` designed for but not active (see open questions) |
+| Items | An item name clicked in Ganymède is **pasted** into Dofus as is — no chat, no `Enter` — into whatever field is open there, typically the auction house search |
 | Dofus target | **Manual selection** of the client window inside Zaapy — the user picks it, Zaapy remembers it |
 | Focus after send | **Stays on Dofus** — no automatic return to Ganymède |
 | Clipboard after send | **Untouched** — the command stays where Ganymède put it, ready for a manual paste. Zaapy reads the clipboard to know there is something to relay, and that is the whole of its business with it |
-| Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, which key opens the chat, and a link to the log folder |
-| Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen. The key that opens the chat is a Dofus keybind, so the panel asks for it; the rest of the sequence is file-only |
+| Interface | System tray / menu bar icon **plus** a compact settings window that follows the OS theme: which two windows to bridge, which commands to relay, which key opens the chat, whether to press Escape afterwards, and a link to the log folder |
+| Send sequence | **Blind typing** — open the chat, paste, validate — made safe by confirming the Dofus window is actually in front rather than by reading the screen. The key that opens the chat is a Dofus keybind, so the panel asks for it, and it offers a closing Escape to hand the keyboard back to the game; the rest of the sequence is file-only |
 | Failures | **System notification** with a clear cause (e.g. "Dofus window not found"); the command stays available for a manual paste |
 | Audience | **Personal use first, public later** — MVP for the author, architecture kept clean enough for a community release |
 
@@ -84,7 +85,7 @@ That said, whether this kind of tooling is acceptable under Ankama's terms of se
 
 ## 11. Glossary
 
-- **Ganymède** — companion app providing Dofus guides; copies `/travel` commands to the clipboard on click.
+- **Ganymède** — companion app providing Dofus guides; copies `/travel` commands, and item names, to the clipboard on click.
 - **Dofus 3** — the game client Zaapy sends commands to.
 - **`/travel x,y`** — in-game chat command that sends the character to the map at those coordinates.
 - **Zaap** — in-game teleportation network; the basis for the announced `/zaap` command.

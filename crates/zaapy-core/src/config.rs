@@ -34,6 +34,9 @@ pub struct Config {
     pub target: TargetSelector,
     pub commands: EnabledCommands,
     pub send_sequence: Vec<SendStep>,
+    /// What an item name gets instead of `send_sequence`: a paste into whatever
+    /// field the game has focused, with no chat to open and nothing to validate.
+    pub paste_sequence: Vec<SendStep>,
     pub focus_timeout_ms: u64,
     /// How long to wait after the target comes forward, before typing. Being in
     /// the foreground is not the same as being ready to read input: a game that
@@ -50,6 +53,7 @@ impl Default for Config {
             target: TargetSelector::default(),
             commands: EnabledCommands::default(),
             send_sequence: default_send_sequence(),
+            paste_sequence: default_paste_sequence(),
             focus_timeout_ms: 800,
             focus_settle_ms: 200,
         }
@@ -68,6 +72,9 @@ impl Config {
             .clamp(SETTLE_RANGE_MS.0, SETTLE_RANGE_MS.1);
         if self.send_sequence.is_empty() {
             self.send_sequence = default_send_sequence();
+        }
+        if self.paste_sequence.is_empty() {
+            self.paste_sequence = default_paste_sequence();
         }
         self.source_processes.retain(|name| !name.trim().is_empty());
         self
@@ -121,6 +128,8 @@ pub struct EnabledCommands {
     /// Off by default: the command does not exist in game yet, so relaying it
     /// would only type a rejected line into the chat.
     pub zaap: bool,
+    /// Item names clicked in Ganymède, pasted without opening the chat.
+    pub items: bool,
 }
 
 impl Default for EnabledCommands {
@@ -128,6 +137,7 @@ impl Default for EnabledCommands {
         Self {
             travel: true,
             zaap: false,
+            items: true,
         }
     }
 }
@@ -137,6 +147,7 @@ impl EnabledCommands {
         match verb {
             Verb::Travel => self.travel,
             Verb::Zaap => self.zaap,
+            Verb::Item => self.items,
         }
     }
 }
@@ -158,6 +169,12 @@ pub fn default_send_sequence() -> Vec<SendStep> {
         SendStep::delay(60),
         SendStep::key(Key::Enter),
     ]
+}
+
+/// Paste, and nothing else: an item name goes into whatever field Dofus already
+/// has focused — the auction house search, most often.
+pub fn default_paste_sequence() -> Vec<SendStep> {
+    vec![SendStep::chord(vec![Modifier::Primary], Key::Char('v'))]
 }
 
 #[cfg(test)]
@@ -199,6 +216,7 @@ mod tests {
             focus_timeout_ms: 10,
             focus_settle_ms: 60_000,
             send_sequence: Vec::new(),
+            paste_sequence: Vec::new(),
             source_processes: vec!["Ganymede.exe".into(), "  ".into()],
             ..Config::default()
         }
@@ -207,6 +225,7 @@ mod tests {
         assert_eq!(config.focus_timeout_ms, FOCUS_TIMEOUT_RANGE_MS.0);
         assert_eq!(config.focus_settle_ms, SETTLE_RANGE_MS.1);
         assert_eq!(config.send_sequence, default_send_sequence());
+        assert_eq!(config.paste_sequence, default_paste_sequence());
         assert_eq!(config.source_processes, vec!["Ganymede.exe".to_string()]);
     }
 

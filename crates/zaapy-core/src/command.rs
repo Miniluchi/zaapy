@@ -4,7 +4,9 @@
 //! session passes through here, and whatever survives validation gets typed
 //! into a game window. So this module is deliberately closed and strict — it
 //! recognises a short list of commands and rejects everything else, rather than
-//! trying to sanitise arbitrary text.
+//! trying to sanitise arbitrary text. Plain text is the one exception: it is an
+//! item name, and it is only ever pasted — never followed by `Enter` — so the
+//! single-line and length checks are all it needs.
 
 use std::fmt;
 
@@ -24,6 +26,9 @@ const COORDINATE_BOUND: i32 = 1_000;
 pub enum Verb {
     Travel,
     Zaap,
+    /// Plain text — an item name Ganymède copies on click. Pasted where the
+    /// game's focus already is, without opening the chat.
+    Item,
 }
 
 impl fmt::Display for Verb {
@@ -31,6 +36,7 @@ impl fmt::Display for Verb {
         match self {
             Verb::Travel => f.write_str("travel"),
             Verb::Zaap => f.write_str("zaap"),
+            Verb::Item => f.write_str("item"),
         }
     }
 }
@@ -47,6 +53,9 @@ pub enum GameCommand {
     Zaap {
         destination: String,
     },
+    Item {
+        name: String,
+    },
 }
 
 impl GameCommand {
@@ -54,6 +63,7 @@ impl GameCommand {
         match self {
             GameCommand::Travel { .. } => Verb::Travel,
             GameCommand::Zaap { .. } => Verb::Zaap,
+            GameCommand::Item { .. } => Verb::Item,
         }
     }
 
@@ -65,6 +75,7 @@ impl GameCommand {
         match self {
             GameCommand::Travel { x, y } => format!("/travel {x},{y}"),
             GameCommand::Zaap { destination } => format!("/zaap {destination}"),
+            GameCommand::Item { name } => name.clone(),
         }
     }
 }
@@ -82,7 +93,7 @@ pub enum Rejection {
     TooLong,
     #[error("payload contains control characters")]
     ControlCharacters,
-    #[error("payload is not a slash command")]
+    #[error("payload is neither a command nor an item name")]
     NotACommand,
     #[error("`/{verb}` is not a command Zaapy relays")]
     UnknownVerb { verb: String },
@@ -105,7 +116,9 @@ pub fn parse(raw: &str) -> Result<GameCommand, Rejection> {
         return Err(Rejection::ControlCharacters);
     }
 
-    let body = text.strip_prefix('/').ok_or(Rejection::NotACommand)?;
+    let Some(body) = text.strip_prefix('/') else {
+        return parse_item(text);
+    };
     let (verb, args) = match body.split_once(char::is_whitespace) {
         Some((verb, args)) => (verb, args.trim()),
         None => (body, ""),
@@ -122,7 +135,11 @@ pub fn parse(raw: &str) -> Result<GameCommand, Rejection> {
 
 fn parse_travel(args: &str) -> Result<GameCommand, Rejection> {
     let bad = || Rejection::BadArguments { verb: Verb::Travel };
-    let (x, y) = args.split_once(',').ok_or_else(bad)?;
+    // Guides write `1,2`; the treasure-hunt overlay writes `1 2`.
+    let (x, y) = match args.split_once(',') {
+        Some((x, y)) => (x.trim(), y.trim()),
+        None => args.split_once(char::is_whitespace).ok_or_else(bad)?,
+    };
     let x: i32 = x.trim().parse().map_err(|_| bad())?;
     let y: i32 = y.trim().parse().map_err(|_| bad())?;
     if x.abs() > COORDINATE_BOUND || y.abs() > COORDINATE_BOUND {
@@ -146,6 +163,16 @@ fn parse_zaap(args: &str) -> Result<GameCommand, Rejection> {
     }
     Ok(GameCommand::Zaap {
         destination: args.to_string(),
+    })
+}
+
+/// Text with no letter in it — a number, a stray symbol — is not an item name.
+fn parse_item(text: &str) -> Result<GameCommand, Rejection> {
+    if !text.chars().any(char::is_alphabetic) {
+        return Err(Rejection::NotACommand);
+    }
+    Ok(GameCommand::Item {
+        name: text.to_string(),
     })
 }
 
@@ -175,10 +202,38 @@ mod tests {
     }
 
     #[test]
-    fn rejects_ordinary_copied_text() {
-        assert_eq!(parse("bonjour"), Err(Rejection::NotACommand));
+    fn accepts_the_treasure_hunt_travel_command() {
+        assert_eq!(
+            parse("/travel -33 -59"),
+            Ok(GameCommand::Travel { x: -33, y: -59 })
+        );
+    }
+
+    #[test]
+    fn rejects_empty_text() {
         assert_eq!(parse(""), Err(Rejection::Empty));
         assert_eq!(parse("   "), Err(Rejection::Empty));
+    }
+
+    #[test]
+    fn plain_text_is_an_item_name() {
+        assert_eq!(
+            parse("  Épée de Boisaille "),
+            Ok(GameCommand::Item {
+                name: "Épée de Boisaille".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn text_without_a_letter_is_not_an_item() {
+        assert_eq!(parse("1234"), Err(Rejection::NotACommand));
+        assert_eq!(parse("-,-"), Err(Rejection::NotACommand));
+    }
+
+    #[test]
+    fn an_item_name_cannot_smuggle_a_second_line() {
+        assert_eq!(parse("Bottes\n/quit"), Err(Rejection::ControlCharacters));
     }
 
     #[test]
@@ -193,7 +248,13 @@ mod tests {
 
     #[test]
     fn rejects_malformed_coordinates() {
-        for payload in ["/travel", "/travel 1", "/travel a,b", "/travel 1,2,3"] {
+        for payload in [
+            "/travel",
+            "/travel 1",
+            "/travel a,b",
+            "/travel 1,2,3",
+            "/travel 1 2 3",
+        ] {
             assert_eq!(
                 parse(payload),
                 Err(Rejection::BadArguments { verb: Verb::Travel }),

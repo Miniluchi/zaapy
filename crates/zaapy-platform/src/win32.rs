@@ -21,7 +21,7 @@ use std::os::windows::ffi::OsStringExt;
 use std::time::Duration;
 
 use windows::core::PWSTR;
-use windows::Win32::Foundation::{CloseHandle, HANDLE, HGLOBAL, HWND, LPARAM};
+use windows::Win32::Foundation::{CloseHandle, HANDLE, HGLOBAL, HWND, LPARAM, POINT};
 use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, GetClipboardData, GetClipboardSequenceNumber, OpenClipboard,
@@ -38,9 +38,9 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     VK_DELETE, VK_ESCAPE, VK_LWIN, VK_MENU, VK_RETURN, VK_SHIFT, VK_SPACE, VK_TAB,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW,
-    GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible, SetForegroundWindow, ShowWindow,
-    SW_RESTORE,
+    BringWindowToTop, EnumWindows, GetAncestor, GetCursorPos, GetForegroundWindow,
+    GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow,
+    IsWindowVisible, SetForegroundWindow, ShowWindow, WindowFromPoint, GA_ROOT, SW_RESTORE,
 };
 use zaapy_core::platform::{
     ClipboardPort, InputPort, Key, Modifier, PlatformError, SendStep, WindowPort, WindowRef,
@@ -193,6 +193,27 @@ impl WindowPort for Windows {
             return None;
         }
         describe(hwnd)
+    }
+
+    /// The top-level window under the pointer. `WindowFromPoint` already skips
+    /// hidden and click-through windows, and returns the child control the
+    /// pointer is on, hence the walk up to its root. Unlike [`describe`], an
+    /// untitled window counts: an overlay need not have a caption.
+    fn under_cursor(&self) -> Option<WindowRef> {
+        let mut point = POINT::default();
+        unsafe { GetCursorPos(&mut point) }.ok()?;
+        let hwnd = unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) };
+        if hwnd.0.is_null() {
+            return None;
+        }
+        let mut pid = 0u32;
+        unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+        Some(WindowRef {
+            handle: hwnd.0 as usize as u64,
+            pid,
+            process: process_name(pid)?,
+            title: window_title(hwnd),
+        })
     }
 
     fn list_visible(&self) -> Vec<WindowRef> {

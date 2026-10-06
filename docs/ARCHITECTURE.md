@@ -38,13 +38,16 @@ reaches a PC.
 
 The host calls `Bridge::tick()` every 100 ms. Each tick:
 
-1. Samples the foreground window, keeping the previous sample.
+1. Samples the foreground window and the window under the pointer, and notes
+   whether either belongs to the source application.
 2. Compares the clipboard's *sequence number* — a cheap counter — and stops there
    if it has not moved. The content is never read on an idle tick.
-3. Parses the payload. Anything that is not a known command is dropped silently.
-4. **The gate**: the command is only relayed if the source application was in
-   front, now or one tick ago. Two samples cover the 100 ms window during which
-   the copy may have happened.
+3. Parses the payload: a known command, or plain text, which is an item name.
+   Anything else is dropped silently.
+4. **The gate**: the payload is only relayed if the user was in the source
+   application — focused or under the pointer. An item name has to have been
+   copied there now or one tick ago, two samples covering the 100 ms window
+   during which the copy may have happened. A command gets two seconds.
 5. Drops a command identical to the previous one inside 500 ms — clipboard
    notifications fire twice for one copy.
 6. Resolves the target window by process name and title substring, refusing to
@@ -53,7 +56,7 @@ The host calls `Bridge::tick()` every 100 ms. Each tick:
 8. Waits for the window to settle. Being in the foreground is not being ready to
    read input; a game just pulled out of the background drops the first frames'
    worth of keystrokes.
-9. Plays the send sequence.
+9. Plays the send sequence for a command, the paste sequence for an item name.
 
 The clipboard is never written to, only read: the command stays where Ganymède
 put it, available for a manual paste whether the send worked or not.
@@ -61,6 +64,23 @@ put it, available for a manual paste whether the send worked or not.
 Steps 4 and 7 are the two safety properties worth protecting in any refactor:
 Zaapy never acts on a copy the user did not make in the guide, and never types
 into a window it has not confirmed is in front.
+
+## Why the pointer counts
+
+Ganymède's treasure-hunt overlays float above the game and take clicks without
+ever becoming the foreground window, so a gate that only looked at the focus
+would turn every hunt step away. The window under the pointer is the other sign
+that the user is working in Ganymède. On macOS it costs a window-list read per
+tick, about 2 ms; on Windows, `WindowFromPoint`.
+
+The overlay also copies its `/travel` only once an animation has played, by
+which time a quick player has clicked back into the game. A command therefore
+counts for two seconds after the user last was in Ganymède. It still has to
+parse as a command to get that far, so the cost of the grace is bounded: a
+`/travel` the user copies themselves elsewhere within those two seconds. Item
+names, which can be any text, get no grace — the pointer crosses an overlay
+sitting over the game all the time, and text copied anywhere just after must
+not land in it.
 
 ## Why polling
 
@@ -76,6 +96,11 @@ The command is already in the clipboard, so the sequence sends `Ctrl+V` instead
 of typing `/travel 1,2` character by character. That sidesteps keyboard layouts
 entirely — on AZERTY the comma and the digits are not where a QWERTY key code
 says they are.
+
+An item name is pasted the same way, by a sequence of its own: `paste_sequence`,
+which is `Ctrl+V` and nothing else. It goes into whatever field the game already
+has focused — the auction house search, typically — so there is no chat to open
+and no line to validate.
 
 ## Why the send sequence is data
 
@@ -94,6 +119,12 @@ that first step in place rather than carrying a key of its own, because the
 sequence is what actually gets played — a second copy of the same fact would
 disagree with it the moment the file is hand-edited.
 
+The last step is the other: Dofus leaves the chat focused once a command is in,
+and the next keystrokes meant for the game land in it. The panel's *Press
+Escape* switch appends an `Escape`, with the usual pause before it, to the end
+of the sequence and removes it again, reading its state from the sequence too.
+It is off by default, because with the chat closed `Escape` opens the game menu.
+
 ## The settings panel
 
 A fixed 420×400 window, hidden at launch and opened from the tray, because in
@@ -101,8 +132,9 @@ normal use there is nothing to look at. Not resizable: there is nothing to revea
 by dragging an edge, and the width is load-bearing — each setting is one line,
 and the labels and hints are written to fit the space 420px leaves them.
 
-No navigation, five settings: the bridge switch, the Ganymède window, the Dofus
-window, which commands to relay, and the key that opens the game's chat. Both
+No navigation, six settings: the bridge switch, the Ganymède window, the Dofus
+window, which commands to relay — items included — the key that opens the
+game's chat, and whether to press Escape after sending. Both
 window pickers are dropdowns over the live window list; choosing a Dofus client
 writes its process name *and* the character name from its title, so the
 multi-client filter is implied by the pick rather than typed.
@@ -141,8 +173,9 @@ common case — no Dofus window open — because it is recomputed every two seco
 
 The rest of the send sequence and the focus timeout are deliberately absent from
 it: they live in the configuration file, reachable when Dofus misbehaves, without
-turning a five-line panel into a keystroke editor. The chat key earns its row by
-being a setting *in Dofus* — the others only ever move to work around a bug.
+turning a six-line panel into a keystroke editor. The chat key earns its row by
+being a setting *in Dofus*, and the closing Escape by being a matter of taste
+rather than of a bug — the others only ever move to work around one.
 
 ## The tray icon
 
@@ -202,6 +235,13 @@ is untouched.
 `NSWorkspace`, which needs nothing, so the source gate is honest from the first
 launch and the window picker stays populated — falling back to the application
 name — while the panel is still asking for the permission.
+
+*The window under the pointer comes from the window list*, which gives pids,
+layers and bounds without Screen Recording — only window names need it. The list
+holds more than the user sees: the Window Server and the login window keep
+full-screen windows above the screen-saver level, and some accessory apps lay a
+transparent, click-through one over everything. Hence the layer ceiling, and
+skipping owners that are not regular applications.
 
 *Raising is done twice.* `AXRaise` on the window and `activate` on the
 application: since macOS 14 the system may ignore an activation request from an

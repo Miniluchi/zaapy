@@ -35,7 +35,10 @@ objc2-application-services = { version = "0.3", features = [
   "AXUIElement",
 ] }
 objc2-core-foundation = { version = "0.3", features = [
+  "CFArray",
+  "CFCGTypes",
   "CFDictionary",
+  "CFNumber",
   "CFString",
 ] }
 objc2-core-graphics = { version = "0.3", features = [
@@ -43,5 +46,6 @@ objc2-core-graphics = { version = "0.3", features = [
   "CGEventSource",
   "CGEventTypes",
   "CGRemoteOperation",
+  "CGWindow",
 ] }
 objc2-foundation = { version = "0.3", features = ["NSString", "NSURL"] }

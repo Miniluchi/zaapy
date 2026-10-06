@@ -22,10 +22,13 @@ use objc2_application_services::{
     AXUIElement,
 };
 use objc2_core_foundation::{
-    kCFBooleanFalse, kCFBooleanTrue, CFBoolean, CFDictionary, CFRetained, CFString, CFType,
+    kCFBooleanFalse, kCFBooleanTrue, CFBoolean, CFDictionary, CFNumber, CFRetained, CFString,
+    CFType, CGPoint,
 };
 use objc2_core_graphics::{
-    CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID, CGEventTapLocation, CGKeyCode,
+    kCGWindowBounds, kCGWindowLayer, kCGWindowOwnerPID, CGEvent, CGEventFlags, CGEventSource,
+    CGEventSourceStateID, CGEventTapLocation, CGKeyCode, CGWindowListCopyWindowInfo,
+    CGWindowListOption,
 };
 use zaapy_core::platform::{
     ClipboardPort, InputPort, Key, Modifier, PlatformError, SendStep, WindowPort, WindowRef,
@@ -37,6 +40,9 @@ use crate::HostStatus;
 /// reason: a client sampling the keyboard once per frame has to find the key
 /// down at least once.
 const KEY_HOLD_MS: u64 = 25;
+
+/// `kCGScreenSaverWindowLevel`. Everything at or above it is the system's.
+const SCREEN_SAVER_LAYER: f64 = 1000.0;
 
 /// Said in one place, because the settings panel and a failed send both show it.
 const ACCESSIBILITY_DENIED: &str = "Zaapy needs Accessibility permission to raise the Dofus \
@@ -167,10 +173,66 @@ fn describe(app: &NSRunningApplication) -> Option<WindowRef> {
     })
 }
 
+/// One numeric entry of a window-list dictionary.
+fn number(entry: &CFDictionary, key: &CFString) -> Option<f64> {
+    let value = unsafe { entry.cast_unchecked::<CFString, CFType>() }.get(key)?;
+    value.downcast::<CFNumber>().ok()?.as_f64()
+}
+
+/// Whether `point` lies inside the `kCGWindowBounds` of a window-list entry.
+fn contains(entry: &CFDictionary, point: CGPoint) -> bool {
+    let Some(bounds) = unsafe { entry.cast_unchecked::<CFString, CFType>() }
+        .get(unsafe { kCGWindowBounds })
+        .and_then(|bounds| bounds.downcast::<CFDictionary>().ok())
+    else {
+        return false;
+    };
+    let field = |name: &str| number(&bounds, &CFString::from_str(name));
+    let (Some(x), Some(y), Some(width), Some(height)) =
+        (field("X"), field("Y"), field("Width"), field("Height"))
+    else {
+        return false;
+    };
+    (x..x + width).contains(&point.x) && (y..y + height).contains(&point.y)
+}
+
 impl WindowPort for Windows {
     fn foreground(&self) -> Option<WindowRef> {
         let app = NSWorkspace::sharedWorkspace().frontmostApplication()?;
         describe(&app)
+    }
+
+    /// The application owning the frontmost window under the pointer.
+    ///
+    /// The window list reads pids, layers and bounds without Screen Recording —
+    /// only window *names* need it, and this never asks for one. A null event's
+    /// location is in the same top-left-origin space as the bounds, so there is
+    /// no coordinate flip to get wrong.
+    ///
+    /// The list holds more than what the user sees: the Window Server and the
+    /// login window keep full-screen windows above the screen-saver level, and
+    /// some accessory apps lay a transparent, click-through one over everything.
+    /// Hence the layer ceiling, and skipping owners that are not regular
+    /// applications. A regular app's click-through overlay would still hide the
+    /// window beneath it; Ganymède's own overlays float above ordinary panels,
+    /// and its main window activates on click, which the foreground covers.
+    fn under_cursor(&self) -> Option<WindowRef> {
+        let point = CGEvent::location(CGEvent::new(None).as_deref());
+        let list = CGWindowListCopyWindowInfo(
+            CGWindowListOption::OptionOnScreenOnly | CGWindowListOption::ExcludeDesktopElements,
+            0,
+        )?;
+        // Front to back, so the first hit is the window the pointer is over.
+        let list = unsafe { list.cast_unchecked::<CFDictionary>() };
+        list.iter().find_map(|entry| {
+            let layer = number(&entry, unsafe { kCGWindowLayer })?;
+            if !(0.0..SCREEN_SAVER_LAYER).contains(&layer) || !contains(&entry, point) {
+                return None;
+            }
+            let pid = number(&entry, unsafe { kCGWindowOwnerPID })? as i32;
+            let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid)?;
+            describe(&app)
+        })
     }
 
     fn list_visible(&self) -> Vec<WindowRef> {

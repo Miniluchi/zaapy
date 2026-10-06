@@ -174,6 +174,13 @@ pub trait ClipboardPort: Send {
 /// Enumerating and raising windows.
 pub trait WindowPort: Send {
     fn foreground(&self) -> Option<WindowRef>;
+    /// The top-level window under the mouse pointer, focused or not.
+    ///
+    /// Ganymède's treasure-hunt overlays float above the game and take clicks
+    /// without ever becoming the foreground window, so the pointer is the only
+    /// sign the user is working in them. Only `process` and `pid` are relied on;
+    /// the title may be empty.
+    fn under_cursor(&self) -> Option<WindowRef>;
     fn list_visible(&self) -> Vec<WindowRef>;
     /// Ask the OS to bring `window` to the front. Returning `Ok` only means the
     /// request was accepted — the bridge always confirms with [`Self::foreground`].

@@ -18,6 +18,11 @@ pub const TICK_INTERVAL_MS: u64 = 100;
 /// repeated inside this window is the same click, not a second one.
 const DEDUP_WINDOW_MS: u64 = 500;
 
+/// How long after the user was last in Ganymède a command still counts as theirs.
+/// The treasure-hunt overlay copies its `/travel` only once an animation has
+/// played, and a quick player is back in the game by then.
+const SOURCE_GRACE_MS: u64 = 2_000;
+
 /// How tightly we re-check that the target actually came forward.
 const FOCUS_POLL_MS: u64 = 25;
 
@@ -53,10 +58,11 @@ pub enum IgnoreReason {
     Unparsed {
         reason: Rejection,
     },
-    /// A real command, but copied while something other than the source app was
-    /// in front. This is the gate that keeps Zaapy from reacting to the user's
-    /// own copy-pasting.
+    /// A real command, but copied while the user was not in the source app —
+    /// neither focused nor under the pointer. This is the gate that keeps Zaapy
+    /// from reacting to the user's own copy-pasting.
     SourceNotFocused {
+        verb: Verb,
         foreground: Option<String>,
     },
     /// A known command the user has switched off — `/zaap` until it ships.
@@ -95,7 +101,10 @@ pub struct Bridge {
     /// `None` until the first tick, which only establishes a baseline. Without
     /// it, whatever happened to be in the clipboard at startup would fire.
     last_sequence: Option<u64>,
-    previous_foreground: Option<WindowRef>,
+    /// Whether the previous tick found the user in a source window.
+    previous_in_source: bool,
+    /// The last tick at which it did.
+    source_seen_at: Option<u64>,
     last_attempt: Option<(String, u64)>,
 }
 
@@ -105,7 +114,8 @@ impl Bridge {
             ports,
             config: config.sanitised(),
             last_sequence: None,
-            previous_foreground: None,
+            previous_in_source: false,
+            source_seen_at: None,
             last_attempt: None,
         }
     }
@@ -133,8 +143,19 @@ impl Bridge {
     /// One turn of the loop. Returns `None` when nothing happened at all, which
     /// is the overwhelming majority of ticks.
     pub fn tick(&mut self) -> Option<TickReport> {
+        // Sampled on every tick, idle or not: the gate looks back in time, so it
+        // needs a record of where the user was before the clipboard moved. The
+        // pointer counts as much as the focus, because Ganymède's overlays take
+        // clicks without ever coming to the foreground.
         let foreground = self.ports.windows.foreground();
-        let previous = std::mem::replace(&mut self.previous_foreground, foreground.clone());
+        let in_source = foreground
+            .iter()
+            .chain(self.ports.windows.under_cursor().iter())
+            .any(|window| self.config.is_source(window));
+        let previous_in_source = std::mem::replace(&mut self.previous_in_source, in_source);
+        if in_source {
+            self.source_seen_at = Some(self.ports.clock.now_ms());
+        }
 
         let sequence = self.ports.clipboard.sequence();
         let changed = self.last_sequence.is_some_and(|last| last != sequence);
@@ -163,16 +184,21 @@ impl Bridge {
             });
         }
 
-        // The safety gate. We accept the current foreground *or* the one sampled
-        // a tick ago, because the clipboard may have changed at any point during
-        // the interval between the two samples.
-        let from_source = [foreground.as_ref(), previous.as_ref()]
-            .into_iter()
-            .flatten()
-            .any(|window| self.config.is_source(window));
+        // The safety gate. An item name has to come from the source now or one
+        // tick ago, since the clipboard may have changed at any point between the
+        // two samples: it is pasted as is, and a copy made anywhere else must not
+        // land in the game. A command gets the longer grace the hunt animation
+        // needs — it still has to parse as one to get this far.
+        let from_source = match command.verb() {
+            Verb::Item => in_source || previous_in_source,
+            _ => self
+                .source_seen_at
+                .is_some_and(|at| self.ports.clock.now_ms().saturating_sub(at) <= SOURCE_GRACE_MS),
+        };
         if !from_source {
             return self.report(Outcome::Ignored {
                 reason: IgnoreReason::SourceNotFocused {
+                    verb: command.verb(),
                     foreground: foreground.map(|window| window.process),
                 },
             });
@@ -223,7 +249,13 @@ impl Bridge {
         // worth of keystrokes, and the chat never opens.
         self.ports.clock.sleep_ms(self.config.focus_settle_ms);
 
-        if let Err(error) = self.ports.input.send(&self.config.send_sequence) {
+        // An item name is pasted where the game's focus already is; everything
+        // else goes through the chat.
+        let steps = match command {
+            GameCommand::Item { .. } => &self.config.paste_sequence,
+            _ => &self.config.send_sequence,
+        };
+        if let Err(error) = self.ports.input.send(steps) {
             return Outcome::Failed {
                 command: label,
                 error: input_failed(error),

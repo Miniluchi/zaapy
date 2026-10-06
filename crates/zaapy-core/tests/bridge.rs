@@ -120,7 +120,8 @@ fn a_failed_send_leaves_the_command_available_for_a_manual_paste() {
 fn a_command_copied_outside_ganymede_is_ignored() {
     let (rig, mut bridge) = armed(config());
     rig.windows.set_foreground(Some(EDITOR));
-    bridge.tick(); // let the editor become both samples
+    rig.clock.advance(2_500); // past the grace a command gets
+    bridge.tick();
 
     rig.clipboard.copy("/travel 1,2");
     let report = bridge.tick().unwrap();
@@ -129,6 +130,7 @@ fn a_command_copied_outside_ganymede_is_ignored() {
         report.outcome,
         Outcome::Ignored {
             reason: IgnoreReason::SourceNotFocused {
+                verb: Verb::Travel,
                 foreground: Some("notepad.exe".to_string()),
             }
         }
@@ -149,11 +151,125 @@ fn the_previous_foreground_sample_still_opens_the_gate() {
     assert!(matches!(report.outcome, Outcome::Sent { .. }));
 }
 
+/// Ganymède's treasure-hunt overlay floats above the game and takes the click
+/// without coming to the foreground: the pointer is what says the user is in it.
 #[test]
-fn ordinary_copied_text_is_ignored() {
+fn a_click_in_a_ganymede_overlay_reaches_the_game() {
+    let (rig, mut bridge) = armed(config());
+    rig.windows.set_foreground(Some(DOFUS));
+    rig.windows.set_cursor(Some(GANYMEDE));
+    rig.clock.advance(5_000);
+    bridge.tick();
+
+    rig.clipboard.copy("/travel -33 -59");
+    let report = bridge.tick().unwrap();
+
+    assert_eq!(
+        report.outcome,
+        Outcome::Sent {
+            command: "/travel -33,-59".to_string(),
+            target_title: "Miniluchi - Dofus 3.0".to_string(),
+        }
+    );
+}
+
+/// The overlay copies once its animation has played, by which time a quick
+/// player has moved back to the game.
+#[test]
+fn a_command_copied_shortly_after_leaving_ganymede_still_travels() {
+    let (rig, mut bridge) = armed(config());
+    rig.windows.set_foreground(Some(DOFUS));
+    rig.clock.advance(1_500);
+    bridge.tick();
+
+    rig.clipboard.copy("/travel 1,2");
+
+    assert!(matches!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Sent { .. }
+    ));
+}
+
+#[test]
+fn a_command_copied_long_after_leaving_ganymede_is_ignored() {
+    let (rig, mut bridge) = armed(config());
+    rig.windows.set_foreground(Some(DOFUS));
+    rig.clock.advance(2_500);
+    bridge.tick();
+
+    rig.clipboard.copy("/travel 1,2");
+
+    assert!(matches!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Ignored {
+            reason: IgnoreReason::SourceNotFocused { .. }
+        }
+    ));
+    assert!(rig.input.sends().is_empty());
+}
+
+#[test]
+fn an_item_clicked_in_ganymede_is_pasted_without_opening_the_chat() {
     let (rig, mut bridge) = armed(config());
 
-    rig.clipboard.copy("rendez-vous devant le zaap");
+    rig.clipboard.copy("Bottes du Bouftou");
+    let report = bridge.tick().unwrap();
+
+    assert_eq!(
+        report.outcome,
+        Outcome::Sent {
+            command: "Bottes du Bouftou".to_string(),
+            target_title: "Miniluchi - Dofus 3.0".to_string(),
+        }
+    );
+    assert_eq!(rig.input.sends(), vec![config().paste_sequence]);
+}
+
+/// Text is pasted as is, so it gets no grace: hovering an overlay and then
+/// copying something elsewhere must not land it in the game.
+#[test]
+fn text_copied_after_leaving_ganymede_is_not_pasted() {
+    let (rig, mut bridge) = armed(config());
+    rig.windows.set_foreground(Some(EDITOR));
+    rig.clock.advance(200);
+    bridge.tick();
+
+    rig.clipboard.copy("Bottes du Bouftou");
+
+    assert!(matches!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Ignored {
+            reason: IgnoreReason::SourceNotFocused {
+                verb: Verb::Item,
+                ..
+            }
+        }
+    ));
+    assert!(rig.input.sends().is_empty());
+}
+
+#[test]
+fn items_can_be_switched_off() {
+    let mut config = config();
+    config.commands.items = false;
+    let (rig, mut bridge) = armed(config);
+
+    rig.clipboard.copy("Bottes du Bouftou");
+
+    assert_eq!(
+        bridge.tick().unwrap().outcome,
+        Outcome::Ignored {
+            reason: IgnoreReason::CommandDisabled { verb: Verb::Item }
+        }
+    );
+    assert!(rig.input.sends().is_empty());
+}
+
+#[test]
+fn text_that_is_neither_a_command_nor_an_item_is_ignored() {
+    let (rig, mut bridge) = armed(config());
+
+    rig.clipboard.copy("12 345");
     let report = bridge.tick().unwrap();
 
     assert!(matches!(

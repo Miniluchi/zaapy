@@ -77,6 +77,7 @@ pub enum FocusBehaviour {
 struct WindowState {
     windows: Vec<WindowRef>,
     foreground: Option<u64>,
+    cursor: Option<u64>,
     behaviour: FocusBehaviour,
     focus_calls: Vec<u64>,
 }
@@ -92,6 +93,7 @@ impl MockWindows {
             state: Arc::new(Mutex::new(WindowState {
                 windows,
                 foreground: None,
+                cursor: None,
                 behaviour: FocusBehaviour::Grants,
                 focus_calls: Vec::new(),
             })),
@@ -100,6 +102,11 @@ impl MockWindows {
 
     pub fn set_foreground(&self, handle: Option<u64>) {
         self.state.lock().unwrap().foreground = handle;
+    }
+
+    /// Put the mouse pointer over a window, without focusing it.
+    pub fn set_cursor(&self, handle: Option<u64>) {
+        self.state.lock().unwrap().cursor = handle;
     }
 
     pub fn set_behaviour(&self, behaviour: FocusBehaviour) {
@@ -119,6 +126,12 @@ impl WindowPort for MockWindows {
     fn foreground(&self) -> Option<WindowRef> {
         let state = self.state.lock().unwrap();
         let handle = state.foreground?;
+        state.windows.iter().find(|w| w.handle == handle).cloned()
+    }
+
+    fn under_cursor(&self) -> Option<WindowRef> {
+        let state = self.state.lock().unwrap();
+        let handle = state.cursor?;
         state.windows.iter().find(|w| w.handle == handle).cloned()
     }
 
