@@ -122,7 +122,11 @@ pub fn parse(raw: &str) -> Result<GameCommand, Rejection> {
 
 fn parse_travel(args: &str) -> Result<GameCommand, Rejection> {
     let bad = || Rejection::BadArguments { verb: Verb::Travel };
-    let (x, y) = args.split_once(',').ok_or_else(bad)?;
+    // Guides write `1,2`; the treasure-hunt overlay writes `1 2`.
+    let (x, y) = match args.split_once(',') {
+        Some((x, y)) => (x.trim(), y.trim()),
+        None => args.split_once(char::is_whitespace).ok_or_else(bad)?,
+    };
     let x: i32 = x.trim().parse().map_err(|_| bad())?;
     let y: i32 = y.trim().parse().map_err(|_| bad())?;
     if x.abs() > COORDINATE_BOUND || y.abs() > COORDINATE_BOUND {
@@ -175,6 +179,14 @@ mod tests {
     }
 
     #[test]
+    fn accepts_the_treasure_hunt_travel_command() {
+        assert_eq!(
+            parse("/travel -33 -59"),
+            Ok(GameCommand::Travel { x: -33, y: -59 })
+        );
+    }
+
+    #[test]
     fn rejects_ordinary_copied_text() {
         assert_eq!(parse("bonjour"), Err(Rejection::NotACommand));
         assert_eq!(parse(""), Err(Rejection::Empty));
@@ -193,7 +205,13 @@ mod tests {
 
     #[test]
     fn rejects_malformed_coordinates() {
-        for payload in ["/travel", "/travel 1", "/travel a,b", "/travel 1,2,3"] {
+        for payload in [
+            "/travel",
+            "/travel 1",
+            "/travel a,b",
+            "/travel 1,2,3",
+            "/travel 1 2 3",
+        ] {
             assert_eq!(
                 parse(payload),
                 Err(Rejection::BadArguments { verb: Verb::Travel }),
