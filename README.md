@@ -26,8 +26,8 @@ Download the latest version from the
 
 | System  | File                                                  |
 | ------- | ----------------------------------------------------- |
-| Windows | `Zaapy_1.0.0_x64-setup.exe`                           |
-| macOS   | `Zaapy_1.0.0_universal.dmg` (Intel and Apple Silicon) |
+| Windows | `Zaapy_1.1.0_x64-setup.exe`                           |
+| macOS   | `Zaapy_1.1.0_universal.dmg` (Intel and Apple Silicon) |
 
 Zaapy isn't code signed — the certificates cost more per year than this free
 project does — so both systems will warn you the first time.
