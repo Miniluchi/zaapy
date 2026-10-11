@@ -26,8 +26,8 @@ Download the latest version from the
 
 | System  | File                                                  |
 | ------- | ----------------------------------------------------- |
-| Windows | `Zaapy_1.1.0_x64-setup.exe`                           |
-| macOS   | `Zaapy_1.1.0_universal.dmg` (Intel and Apple Silicon) |
+| Windows | `Zaapy_1.2.0_x64-setup.exe`                           |
+| macOS   | `Zaapy_1.2.0_universal.dmg` (Intel and Apple Silicon) |
 
 Zaapy isn't code signed — the certificates cost more per year than this free
 project does — so both systems will warn you the first time.
@@ -66,8 +66,8 @@ settings.
 By default the Dofus chat keeps the keyboard after a command. Tick **Press
 Escape** in the settings to hand it back to the game.
 
-`/zaap` is greyed out for now. Ankama has announced the command but it does not
-exist in the game yet; Zaapy will support it when it ships.
+`/zaap` commands, chained `/travel` included, are relayed the same way. Turn
+them off with **/zaap** in the settings.
 
 ## Privacy
 

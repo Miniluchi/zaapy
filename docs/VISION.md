@@ -42,7 +42,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 | macOS permissions | **Accessibility**, asked for from the settings window. The source gate works without it, so nothing is ever sent from an unpermitted install — the panel says what is missing instead |
 | Trigger | Fully automatic and immediate, **gated**: the command is only bridged if Ganymède was the foreground window when it appeared in the clipboard |
 | Source app | Ganymède **desktop app** (detected by process/window, no browser support) |
-| Commands relayed | `/travel` today, from guides and from the treasure-hunt overlay; `/zaap` designed for but not active (see open questions) |
+| Commands relayed | `/travel`, from guides and from the treasure-hunt overlay; `/zaap x y`, optionally chained with `; /travel x y`, since Dofus 3.7 |
 | Items | An item name clicked in Ganymède is **pasted** into Dofus as is — no chat, no `Enter` — into whatever field is open there, typically the auction house search |
 | Dofus target | **Manual selection** of the client window inside Zaapy — the user picks it, Zaapy remembers it |
 | Focus after send | **Stays on Dofus** — no automatic return to Ganymède |
@@ -66,8 +66,7 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 
 These are deliberately left undecided here:
 
-1. **`/zaap` support.** Announced but not yet implemented in-game. Only `/travel` works today, so the command handling must be able to accept `/zaap` later without a redesign — but the exact trigger and formatting cannot be locked in until Ankama ships it.
-2. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
+1. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
 
 ## 9. Beyond v1 — non-committal directions
 
@@ -88,6 +87,6 @@ That said, whether this kind of tooling is acceptable under Ankama's terms of se
 - **Ganymède** — companion app providing Dofus guides; copies `/travel` commands, and item names, to the clipboard on click.
 - **Dofus 3** — the game client Zaapy sends commands to.
 - **`/travel x,y`** — in-game chat command that sends the character to the map at those coordinates.
-- **Zaap** — in-game teleportation network; the basis for the announced `/zaap` command.
+- **Zaap** — in-game teleportation network; the basis for the `/zaap` command.
 - **Bridge** — Zaapy's core job: turning a clipboard event in one window into a keyboard event in another.
 - **Target window** — the specific Dofus client the user selected to receive commands.

@@ -219,11 +219,17 @@
         />
         /travel
       </label>
-      <!-- Left visible rather than hidden: the command is coming, and a missing
-           row reads as a missing feature. -->
-      <label class="check" title="Announced by Ankama, not live in game yet">
-        <input type="checkbox" checked={config.commands.zaap} disabled />
-        /zaap <span class="hint">soon</span>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={config.commands.zaap}
+          onchange={(event) =>
+            save({
+              ...config!,
+              commands: { ...config!.commands, zaap: event.currentTarget.checked },
+            })}
+        />
+        /zaap
       </label>
       <label class="check" title="An item name clicked in Ganymède is pasted into Dofus as is — into the search field you have open, without opening the chat">
         <input

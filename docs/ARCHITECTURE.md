@@ -157,8 +157,8 @@ key's `i` marker, which is a mark in a line of text rather than a control —
 fallback face.
 
 Explanations too long for a label go in a native `title` tooltip, which both
-WKWebView and WebView2 render themselves: the `/zaap` row says why it is greyed
-out, and the chat key says which keybind it has to match. A tooltip nobody hovers
+WKWebView and WebView2 render themselves: the Items row says where the name
+lands, and the chat key says which keybind it has to match. A tooltip nobody hovers
 is invisible, so the ones worth reading are marked.
 
 Nothing is offered that cannot be acted on: `HostStatus::can_request_permission`

@@ -65,7 +65,7 @@ pub enum IgnoreReason {
         verb: Verb,
         foreground: Option<String>,
     },
-    /// A known command the user has switched off — `/zaap` until it ships.
+    /// A known command the user has switched off.
     CommandDisabled {
         verb: Verb,
     },
