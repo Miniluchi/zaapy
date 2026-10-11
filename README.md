@@ -66,8 +66,8 @@ settings.
 By default the Dofus chat keeps the keyboard after a command. Tick **Press
 Escape** in the settings to hand it back to the game.
 
-`/zaap` is greyed out for now. Ankama has announced the command but it does not
-exist in the game yet; Zaapy will support it when it ships.
+`/zaap` commands, chained `/travel` included, are relayed the same way. Turn
+them off with **/zaap** in the settings.
 
 ## Privacy
 
