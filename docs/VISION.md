@@ -66,14 +66,14 @@ A Dofus 3 player following a Ganymède guide, on **Windows or macOS**, possibly 
 
 These are deliberately left undecided here:
 
-1. **Distribution.** Signed installers, notarization, and auto-update only become relevant at the public-release step — but they constrain packaging choices made earlier.
+1. **Distribution.** Signed installers and notarization only become relevant at the public-release step — but they constrain packaging choices made earlier.
 
 ## 9. Beyond v1 — non-committal directions
 
 - Broadcasting to several clients for multi-account play.
 - A configurable allowlist of relayed command prefixes.
 - Optional focus return to Ganymède, for users who prefer to stay in the guide.
-- Signed installer and auto-update for a community release.
+- Signed installer for a community release.
 - Ganymède web support, if the desktop app stops being the common case.
 
 ## 10. Risk and compliance
