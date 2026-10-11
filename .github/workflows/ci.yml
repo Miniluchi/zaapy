@@ -1,8 +1,7 @@
 name: CI
 
+# Not on push to main: main only moves through PRs, which already ran this.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
