@@ -47,11 +47,12 @@ pub enum GameCommand {
         x: i32,
         y: i32,
     },
-    /// Announced by Ankama but not yet live in game. Parsed so that enabling it
-    /// later is a configuration switch rather than a redesign; the argument
-    /// grammar is intentionally loose until the real one exists.
+    /// Teleport to the zaap nearest `x,y`. Guides may chain a `/travel` for the
+    /// last leg, which the game runs once the teleport lands.
     Zaap {
-        destination: String,
+        x: i32,
+        y: i32,
+        then: Option<(i32, i32)>,
     },
     Item {
         name: String,
@@ -74,7 +75,12 @@ impl GameCommand {
     pub fn canonical(&self) -> String {
         match self {
             GameCommand::Travel { x, y } => format!("/travel {x},{y}"),
-            GameCommand::Zaap { destination } => format!("/zaap {destination}"),
+            GameCommand::Zaap { x, y, then: None } => format!("/zaap {x} {y}"),
+            GameCommand::Zaap {
+                x,
+                y,
+                then: Some((tx, ty)),
+            } => format!("/zaap {x} {y} ; /travel {tx} {ty}"),
             GameCommand::Item { name } => name.clone(),
         }
     }
@@ -134,7 +140,12 @@ pub fn parse(raw: &str) -> Result<GameCommand, Rejection> {
 }
 
 fn parse_travel(args: &str) -> Result<GameCommand, Rejection> {
-    let bad = || Rejection::BadArguments { verb: Verb::Travel };
+    let (x, y) = parse_coordinates(args, Verb::Travel)?;
+    Ok(GameCommand::Travel { x, y })
+}
+
+fn parse_coordinates(args: &str, verb: Verb) -> Result<(i32, i32), Rejection> {
+    let bad = || Rejection::BadArguments { verb };
     // Guides write `1,2`; the treasure-hunt overlay writes `1 2`.
     let (x, y) = match args.split_once(',') {
         Some((x, y)) => (x.trim(), y.trim()),
@@ -145,25 +156,23 @@ fn parse_travel(args: &str) -> Result<GameCommand, Rejection> {
     if x.abs() > COORDINATE_BOUND || y.abs() > COORDINATE_BOUND {
         return Err(bad());
     }
-    Ok(GameCommand::Travel { x, y })
+    Ok((x, y))
 }
 
+/// `/zaap x y`, optionally chained with `; /travel x y` — and nothing else may
+/// follow the `;`, since the game runs whatever command sits there.
 fn parse_zaap(args: &str) -> Result<GameCommand, Rejection> {
-    let bad = || Rejection::BadArguments { verb: Verb::Zaap };
-    if args.is_empty() {
-        return Err(bad());
-    }
-    // Until the real grammar ships, accept what a place name plausibly contains
-    // and nothing that could be read as punctuation by the chat parser.
-    let acceptable = args
-        .chars()
-        .all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '\'' | ','));
-    if !acceptable {
-        return Err(bad());
-    }
-    Ok(GameCommand::Zaap {
-        destination: args.to_string(),
-    })
+    let (head, tail) = match args.split_once(';') {
+        Some((head, tail)) => (head, Some(tail)),
+        None => (args, None),
+    };
+    let (x, y) = parse_coordinates(head.trim(), Verb::Zaap)?;
+    let then = match tail.map(parse) {
+        None => None,
+        Some(Ok(GameCommand::Travel { x, y })) => Some((x, y)),
+        Some(_) => return Err(Rejection::BadArguments { verb: Verb::Zaap }),
+    };
+    Ok(GameCommand::Zaap { x, y, then })
 }
 
 /// Text with no letter in it — a number, a stray symbol — is not an item name.
@@ -293,17 +302,45 @@ mod tests {
     }
 
     #[test]
-    fn parses_zaap_ahead_of_its_release() {
+    fn accepts_ganymede_zaap_commands() {
         assert_eq!(
-            parse("/zaap Astrub"),
+            parse("/zaap 5 7"),
             Ok(GameCommand::Zaap {
-                destination: "Astrub".to_string()
+                x: 5,
+                y: 7,
+                then: None
             })
         );
+        let chained = parse("/zaap -31 -56 ; /travel -32 -57").unwrap();
         assert_eq!(
-            parse("/zaap"),
-            Err(Rejection::BadArguments { verb: Verb::Zaap })
+            chained,
+            GameCommand::Zaap {
+                x: -31,
+                y: -56,
+                then: Some((-32, -57))
+            }
         );
+        assert_eq!(parse(&chained.canonical()), Ok(chained));
+    }
+
+    #[test]
+    fn rejects_malformed_zaap_commands() {
+        for payload in [
+            "/zaap",
+            "/zaap Astrub",
+            "/zaap 1 2 ;",
+            "/zaap 1 2 ; /who",
+            "/zaap 1 2 ; /zaap 3 4",
+            "/zaap 1 2 ; /travel 3 4 ; /travel 5 6",
+            "/zaap 1 2 ; Bottes",
+            "/zaap 99999 0",
+        ] {
+            assert_eq!(
+                parse(payload),
+                Err(Rejection::BadArguments { verb: Verb::Zaap }),
+                "payload: {payload}"
+            );
+        }
     }
 
     #[test]
