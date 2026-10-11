@@ -26,8 +26,8 @@ Download the latest version from the
 
 | System  | File                                                  |
 | ------- | ----------------------------------------------------- |
-| Windows | `Zaapy_1.2.0_x64-setup.exe`                           |
-| macOS   | `Zaapy_1.2.0_universal.dmg` (Intel and Apple Silicon) |
+| Windows | `Zaapy_1.3.0_x64-setup.exe`                           |
+| macOS   | `Zaapy_1.3.0_universal.dmg` (Intel and Apple Silicon) |
 
 Zaapy isn't code signed — the certificates cost more per year than this free
 project does — so both systems will warn you the first time.
@@ -69,13 +69,17 @@ Escape** in the settings to hand it back to the game.
 `/zaap` commands, chained `/travel` included, are relayed the same way. Turn
 them off with **/zaap** in the settings.
 
+When a new version is out, Zaapy says so at startup and adds **Update to…** to
+its tray menu. Nothing is installed until you click it.
+
 ## Privacy
 
 - Zaapy **only reads** your clipboard, never clears or changes it — after a
   send, the command is still there to paste manually.
 - It only acts on what you copy **in Ganymède**; anything else is ignored.
 - It never types into a window without confirming that window is in front.
-- Nothing is sent anywhere: no account, no server, no telemetry.
+- Nothing is sent anywhere: no account, no server, no telemetry. The only
+  request Zaapy makes is the update check at startup, to GitHub.
 
 ## Licence and source
 

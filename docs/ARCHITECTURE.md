@@ -207,6 +207,20 @@ entry has to be removed and re-added. Only a Developer ID signature, which
 survives across versions, removes that step — along with the Gatekeeper warning
 and the need to notarize.
 
+### Updates
+
+`tauri-plugin-updater` reads `latest.json` from the latest *published* GitHub
+release, so a draft reaches nobody until it is reviewed and published by hand.
+The `Release` workflow signs the update bundles with the updater key (secrets
+`TAURI_SIGNING_PRIVATE_KEY` and `_PASSWORD`), and the app refuses any bundle that
+does not match the public key in `tauri.conf.json`. Losing that private key
+means existing installs can never be updated again.
+
+Updates are offered, never applied: one check at startup, a notification and a
+tray item, and the download only starts from a click (`src-tauri/src/updater.rs`).
+On macOS each update is a new `cdhash`, so Accessibility has to be granted again
+— see above.
+
 ## Platform notes
 
 **Windows.** `SetForegroundWindow` is ignored for a background process, so

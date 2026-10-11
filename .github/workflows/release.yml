@@ -46,9 +46,14 @@ jobs:
       # Neither bundle is signed: Zaapy has no Apple Developer ID and no
       # Authenticode certificate, so Gatekeeper and SmartScreen both warn on
       # first launch. The README tells the user how to get past it.
+      # The updater key is not a code signing certificate: it only proves to an
+      # installed Zaapy that an update bundle comes from this workflow. With it,
+      # the action also uploads the `.sig` files and the `latest.json` manifest.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           args: ${{ matrix.args }}
           # Empty on a manual run, which makes the action build and publish

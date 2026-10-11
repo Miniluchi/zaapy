@@ -8,11 +8,15 @@ use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, Runtime as TauriRuntime};
 
 use crate::runtime::{self, Runtime};
+use crate::updater;
 
 /// The tray's copy of the bridge switch, kept in state so a change made in the
 /// settings page can move the check mark. Without it the two surfaces drift
 /// apart the moment either one is used.
 pub struct BridgeToggle<R: TauriRuntime>(pub CheckMenuItem<R>);
+
+/// Kept so the updater can add its item once it knows there is something to offer.
+pub struct TrayMenu<R: TauriRuntime>(pub Menu<R>);
 
 pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let enabled_now = app.state::<Runtime>().config().enabled;
@@ -62,11 +66,13 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
                     tracing::error!(%error, "could not persist the bridge switch");
                 }
             }
+            updater::MENU_ID => updater::install(app),
             "quit" => app.exit(0),
             other => tracing::debug!(id = other, "unhandled tray menu item"),
         });
 
     app.manage(BridgeToggle(enabled));
+    app.manage(TrayMenu(menu));
     builder.build(app)?;
     Ok(())
 }

@@ -8,6 +8,7 @@ mod ipc;
 mod logging;
 mod runtime;
 mod tray;
+mod updater;
 
 use tauri::{Manager, WindowEvent};
 
@@ -23,6 +24,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let handle = app.handle().clone();
 
@@ -36,6 +38,7 @@ pub fn run() {
 
             tray::build(&handle)?;
             runtime::spawn(handle.clone());
+            updater::check(&handle);
 
             // The dock icon would be misleading for something that lives in the
             // menu bar and has no document of its own.
