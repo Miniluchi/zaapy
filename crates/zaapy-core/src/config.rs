@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::command::Verb;
 use crate::platform::{Key, Modifier, SendStep, WindowRef};
 
-pub const CONFIG_VERSION: u32 = 1;
+pub const CONFIG_VERSION: u32 = 2;
 
 /// Bounds on the focus confirmation wait. Below the floor the game has no time
 /// to come forward; above the ceiling the user is just staring at a frozen guide.
@@ -77,6 +77,12 @@ impl Config {
             self.paste_sequence = default_paste_sequence();
         }
         self.source_processes.retain(|name| !name.trim().is_empty());
+        // Version 1 saved `/zaap` off while it was not in the game yet, behind a
+        // toggle the user could not reach.
+        if self.version < 2 {
+            self.commands.zaap = true;
+        }
+        self.version = CONFIG_VERSION;
         self
     }
 
@@ -125,8 +131,6 @@ impl TargetSelector {
 #[serde(default)]
 pub struct EnabledCommands {
     pub travel: bool,
-    /// Off by default: the command does not exist in game yet, so relaying it
-    /// would only type a rejected line into the chat.
     pub zaap: bool,
     /// Item names clicked in Ganymède, pasted without opening the chat.
     pub items: bool,
@@ -136,7 +140,7 @@ impl Default for EnabledCommands {
     fn default() -> Self {
         Self {
             travel: true,
-            zaap: false,
+            zaap: true,
             items: true,
         }
     }
@@ -230,10 +234,22 @@ mod tests {
     }
 
     #[test]
-    fn zaap_stays_off_until_ankama_ships_it() {
+    fn travel_and_zaap_are_on_by_default() {
         let config = Config::default();
         assert!(config.commands.allows(Verb::Travel));
-        assert!(!config.commands.allows(Verb::Zaap));
+        assert!(config.commands.allows(Verb::Zaap));
+    }
+
+    #[test]
+    fn zaap_is_switched_on_once_for_a_version_1_file() {
+        let saved = r#"{"version":1,"commands":{"travel":true,"zaap":false,"items":true}}"#;
+        let config = serde_json::from_str::<Config>(saved).unwrap().sanitised();
+        assert!(config.commands.zaap);
+        assert_eq!(config.version, CONFIG_VERSION);
+
+        let saved = r#"{"version":2,"commands":{"travel":true,"zaap":false,"items":true}}"#;
+        let config = serde_json::from_str::<Config>(saved).unwrap().sanitised();
+        assert!(!config.commands.zaap);
     }
 
     #[test]

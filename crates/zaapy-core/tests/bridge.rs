@@ -282,10 +282,26 @@ fn text_that_is_neither_a_command_nor_an_item_is_ignored() {
 }
 
 #[test]
-fn zaap_is_recognised_but_not_relayed_until_it_ships() {
+fn a_chained_zaap_is_relayed_through_the_chat() {
     let (rig, mut bridge) = armed(config());
 
-    rig.clipboard.copy("/zaap Astrub");
+    rig.clipboard.copy("/zaap -31 -56 ; /travel -32 -57");
+    let report = bridge.tick().unwrap();
+
+    assert!(matches!(
+        report.outcome,
+        Outcome::Sent { ref command, .. } if command == "/zaap -31 -56 ; /travel -32 -57"
+    ));
+    assert_eq!(rig.input.sends(), vec![config().send_sequence]);
+}
+
+#[test]
+fn zaap_can_be_switched_off() {
+    let mut config = config();
+    config.commands.zaap = false;
+    let (rig, mut bridge) = armed(config);
+
+    rig.clipboard.copy("/zaap 5 7");
     let report = bridge.tick().unwrap();
 
     assert_eq!(
@@ -295,20 +311,6 @@ fn zaap_is_recognised_but_not_relayed_until_it_ships() {
         }
     );
     assert!(rig.input.sends().is_empty());
-}
-
-#[test]
-fn enabling_zaap_is_a_single_switch() {
-    let mut config = config();
-    config.commands.zaap = true;
-    let (rig, mut bridge) = armed(config);
-
-    rig.clipboard.copy("/zaap Astrub");
-    assert!(matches!(
-        bridge.tick().unwrap().outcome,
-        Outcome::Sent { .. }
-    ));
-    assert_eq!(rig.input.sends().len(), 1);
 }
 
 /// Clipboard notifications like to fire twice for one copy.
