@@ -1,90 +1,99 @@
 # Zaapy
 
-**Click a position in a Ganymède guide, and your character travels there in
-Dofus 3. No copy-paste, no switching windows.**
+**Voyage automatique dans Dofus 3 depuis les guides Ganymède : cliquez une
+position, votre personnage s'y rend. Sans copier-coller, sans changer de
+fenêtre.**
 
 <p align="center">
-  <img src="assets/icon-1024.png" width="128" alt="Zaapy">
+  <img src="assets/icon-1024.png" width="128" alt="Icône Zaapy – voyage automatique Dofus 3">
 </p>
 
-## What it does
+## Ce que ça fait
 
-Clicking a coordinate in a Ganymède guide copies `/travel x,y` to your
-clipboard. Normally you'd switch to Dofus, open the chat, paste, press Enter,
-and switch back.
+Cliquer une coordonnée dans un guide Ganymède copie `/travel x,y` dans votre
+presse-papiers. Normalement, il faut ensuite passer sur Dofus, ouvrir le chat,
+coller, appuyer sur Entrée, puis revenir au guide.
 
-Zaapy does that part for you: the moment Ganymède copies a travel command, it
-brings Dofus to the front and types the command into the chat. You never leave
-the guide.
+Zaapy s'en charge : dès que Ganymède copie une commande de voyage, il met Dofus
+au premier plan et tape la commande dans le chat. Vous ne quittez jamais le
+guide.
 
-Works on **Windows** and **macOS**.
+Fonctionne sur **Windows** et **macOS**.
 
-## Install
+## Installation
 
-Download the latest version from the
-[Releases page](https://github.com/Miniluchi/zaapy/releases):
+Téléchargez la dernière version sur la
+[page Releases](https://github.com/Miniluchi/zaapy/releases) :
 
-| System  | File                                                  |
+| Système | Fichier                                               |
 | ------- | ----------------------------------------------------- |
 | Windows | `Zaapy_1.3.0_x64-setup.exe`                           |
-| macOS   | `Zaapy_1.3.0_universal.dmg` (Intel and Apple Silicon) |
+| macOS   | `Zaapy_1.3.0_universal.dmg` (Intel et Apple Silicon)  |
 
-Zaapy isn't code signed — the certificates cost more per year than this free
-project does — so both systems will warn you the first time.
+Zaapy n'est pas signé — les certificats coûtent plus cher chaque année que ce
+projet gratuit ne rapporte — donc les deux systèmes vous avertiront au premier
+lancement.
 
 ### Windows
 
-1. Run the installer. Windows shows a blue **"Windows protected your PC"**
-   screen.
-2. Click **More info**, then **Run anyway**.
-3. No administrator rights needed; it installs just for you and fetches the
-   WebView2 runtime automatically if missing.
+1. Lancez l'installateur. Windows affiche un écran bleu **« Windows a protégé
+   votre ordinateur »**.
+2. Cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.
+3. Pas besoin de droits administrateur : l'installation est faite pour vous
+   seul, et le runtime WebView2 est téléchargé automatiquement s'il manque.
 
 ### macOS
 
-1. Open the `.dmg` and drag Zaapy into **Applications**.
-2. **Do not double-click it.** Right-click Zaapy in Applications, choose
-   **Open**, then **Open** again in the dialog. You only need to do this once.
-3. Zaapy needs permission to control other windows. Open its settings from the
-   menu bar icon and click **Grant permission…**, then allow it in the dialog
-   macOS shows.
-4. If no dialog appears — macOS only asks once — enable Zaapy by hand in
-   **System Settings → Privacy & Security → Accessibility**.
+1. Ouvrez le `.dmg` et glissez Zaapy dans **Applications**.
+2. **Ne double-cliquez pas dessus.** Faites un clic droit sur Zaapy dans
+   Applications, choisissez **Ouvrir**, puis **Ouvrir** à nouveau dans la
+   fenêtre de dialogue. Une seule fois suffit.
+3. Zaapy a besoin d'une autorisation pour contrôler les autres fenêtres. Ouvrez
+   ses réglages depuis l'icône de la barre des menus, cliquez sur **Grant
+   permission…**, puis acceptez dans la fenêtre affichée par macOS.
+4. Si aucune fenêtre n'apparaît — macOS ne demande qu'une fois — activez Zaapy à
+   la main dans **Réglages Système → Confidentialité et sécurité →
+   Accessibilité**.
 
-Without that permission Zaapy can't bring up or type into your Dofus window,
-and its settings will say so rather than failing silently.
+Sans cette autorisation, Zaapy ne peut ni afficher votre fenêtre Dofus ni y
+écrire, et ses réglages vous le signaleront au lieu d'échouer en silence.
 
-## Using it
+## Utilisation
 
-Follow your guide as usual and click a position. Zaapy takes over from there.
-The arrows of Ganymède's treasure-hunt tool work the same way.
+Suivez votre guide comme d'habitude et cliquez une position. Zaapy prend le
+relais. Les flèches de l'outil de chasse au trésor de Ganymède fonctionnent de
+la même façon.
 
-Clicking an item in Ganymède pastes its name into Dofus — into the auction
-house search, say — without opening the chat. Turn it off with **Items** in the
-settings.
+Cliquer un objet dans Ganymède colle son nom dans Dofus — dans la recherche de
+l'hôtel des ventes, par exemple — sans ouvrir le chat. Désactivez-le avec
+**Items** dans les réglages.
 
-By default the Dofus chat keeps the keyboard after a command. Tick **Press
-Escape** in the settings to hand it back to the game.
+Par défaut, le chat de Dofus garde le clavier après une commande. Cochez
+**Press Escape** dans les réglages pour le rendre au jeu.
 
-`/zaap` commands, chained `/travel` included, are relayed the same way. Turn
-them off with **/zaap** in the settings.
+Les commandes `/zaap`, y compris les `/travel` enchaînés, sont relayées de la
+même façon. Désactivez-les avec **/zaap** dans les réglages.
 
-When a new version is out, Zaapy says so at startup and adds **Update to…** to
-its tray menu. Nothing is installed until you click it.
+Quand une nouvelle version sort, Zaapy le signale au démarrage et ajoute
+**Update to…** au menu de son icône (zone de notification ou barre des menus).
+Rien n'est installé tant que vous n'avez pas cliqué.
 
-## Privacy
+## Confidentialité
 
-- Zaapy **only reads** your clipboard, never clears or changes it — after a
-  send, the command is still there to paste manually.
-- It only acts on what you copy **in Ganymède**; anything else is ignored.
-- It never types into a window without confirming that window is in front.
-- Nothing is sent anywhere: no account, no server, no telemetry. The only
-  request Zaapy makes is the update check at startup, to GitHub.
+- Zaapy **lit seulement** votre presse-papiers, sans jamais le vider ni le
+  modifier — après un envoi, la commande y est toujours pour un collage manuel.
+- Il ne réagit qu'à ce que vous copiez **dans Ganymède** ; tout le reste est
+  ignoré.
+- Il n'écrit jamais dans une fenêtre sans avoir vérifié qu'elle est au premier
+  plan.
+- Rien n'est envoyé nulle part : pas de compte, pas de serveur, pas de
+  télémétrie. La seule requête de Zaapy est la vérification des mises à jour au
+  démarrage, auprès de GitHub.
 
-## Licence and source
+## Licence et code source
 
-Zaapy is free and open source under the [MIT licence](LICENSE).
+Zaapy est gratuit et open source, sous [licence MIT](LICENSE).
 
-- [Contributing and building from source](docs/DEVELOPMENT.md)
-- [What the product is, and what it deliberately is not](docs/VISION.md)
-- [How it is built](docs/ARCHITECTURE.md)
+- [Contribuer et compiler depuis les sources](docs/DEVELOPMENT.md)
+- [Ce qu'est le produit, et ce qu'il n'est volontairement pas](docs/VISION.md)
+- [Comment il est construit](docs/ARCHITECTURE.md)
