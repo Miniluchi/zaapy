@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::command::{self, GameCommand, Rejection, Verb};
 use crate::config::{Config, TargetSelector};
-use crate::platform::{PlatformError, Ports, WindowRef};
+use crate::platform::{PlatformError, Ports, SendStep, WindowRef};
 
 /// How often the host is expected to call [`Bridge::tick`].
 pub const TICK_INTERVAL_MS: u64 = 100;
@@ -227,7 +227,7 @@ impl Bridge {
     fn deliver(&self, command: &GameCommand) -> Outcome {
         let label = command.canonical();
 
-        let target = match self.resolve_target() {
+        let main = match self.resolve_target() {
             Ok(target) => target,
             Err(error) => {
                 return Outcome::Failed {
@@ -237,35 +237,66 @@ impl Bridge {
             }
         };
 
-        if let Err(error) = self.focus_and_confirm(&target) {
-            return Outcome::Failed {
+        // An item name is pasted where the game's focus already is, so it only
+        // ever goes to the main client; everything else goes through the chat.
+        let (steps, targets) = match command {
+            GameCommand::Item { .. } => (&self.config.paste_sequence, vec![main]),
+            _ => (&self.config.send_sequence, self.relay_targets(main)),
+        };
+
+        // Every client is tried even if one fails, so a stuck account does not
+        // leave the others behind. The first error is the one reported.
+        let mut first_error = None;
+        let mut reached = Vec::new();
+        for target in &targets {
+            match self.send_to(target, steps) {
+                Ok(()) => reached.push(target.title.clone()),
+                Err(error) => {
+                    first_error.get_or_insert(error);
+                }
+            }
+        }
+
+        match first_error {
+            Some(error) => Outcome::Failed {
                 command: label,
                 error,
-            };
+            },
+            None => Outcome::Sent {
+                command: label,
+                target_title: reached.join(", "),
+            },
         }
+    }
+
+    /// The windows a chat command goes to, in the order it visits them: the other
+    /// clients of the main one's process first, the main client last, so that the
+    /// user ends up in front of the character they are playing.
+    fn relay_targets(&self, main: WindowRef) -> Vec<WindowRef> {
+        if !self.config.multi_account {
+            return vec![main];
+        }
+        let mut targets: Vec<WindowRef> = self
+            .ports
+            .windows
+            .list_visible()
+            .into_iter()
+            .filter(|window| window.process_matches(&self.config.target.process))
+            .filter(|window| window.handle != main.handle)
+            .collect();
+        targets.push(main);
+        targets
+    }
+
+    fn send_to(&self, target: &WindowRef, steps: &[SendStep]) -> Result<(), BridgeError> {
+        self.focus_and_confirm(target)?;
 
         // Confirming the window is in front is not confirming it is ready to read
         // input: a game just pulled out of the background drops the first frames'
         // worth of keystrokes, and the chat never opens.
         self.ports.clock.sleep_ms(self.config.focus_settle_ms);
 
-        // An item name is pasted where the game's focus already is; everything
-        // else goes through the chat.
-        let steps = match command {
-            GameCommand::Item { .. } => &self.config.paste_sequence,
-            _ => &self.config.send_sequence,
-        };
-        if let Err(error) = self.ports.input.send(steps) {
-            return Outcome::Failed {
-                command: label,
-                error: input_failed(error),
-            };
-        }
-
-        Outcome::Sent {
-            command: label,
-            target_title: target.title,
-        }
+        self.ports.input.send(steps).map_err(input_failed)
     }
 
     /// Raise the window, then *verify* it actually came forward.

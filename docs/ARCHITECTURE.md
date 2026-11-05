@@ -127,14 +127,14 @@ It is off by default, because with the chat closed `Escape` opens the game menu.
 
 ## The settings panel
 
-A fixed 420×400 window, hidden at launch and opened from the tray, because in
+A fixed 420×436 window, hidden at launch and opened from the tray, because in
 normal use there is nothing to look at. Not resizable: there is nothing to reveal
 by dragging an edge, and the width is load-bearing — each setting is one line,
 and the labels and hints are written to fit the space 420px leaves them.
 
-No navigation, six settings: the bridge switch, the Ganymède window, the Dofus
+No navigation, seven settings: the bridge switch, the Ganymède window, the Dofus
 window, which commands to relay — items included — the key that opens the
-game's chat, and whether to press Escape after sending. Both
+game's chat, whether to press Escape after sending, and whether to relay to every open client (multi-account). Both
 window pickers are dropdowns over the live window list; choosing a Dofus client
 writes its process name *and* the character name from its title, so the
 multi-client filter is implied by the pick rather than typed.

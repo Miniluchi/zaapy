@@ -294,6 +294,25 @@
       </label>
     </div>
 
+    <!-- The same switch as the tray's Multi-account item; both write the one
+         config field, so neither can disagree with the other. -->
+    <div class="row">
+      <span
+        class="label"
+        title="Send /travel and /zaap to every open Dofus window, your selected character last. Item names still go to the selected character only."
+      >
+        Accounts <span class="info" aria-hidden="true">i</span>
+      </span>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={config.multi_account}
+          onchange={(event) => save({ ...config!, multi_account: event.currentTarget.checked })}
+        />
+        Multi-account
+      </label>
+    </div>
+
     <hr />
 
     <div class="row end">

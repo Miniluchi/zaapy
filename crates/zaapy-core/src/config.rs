@@ -32,6 +32,10 @@ pub struct Config {
     /// product rests on.
     pub source_processes: Vec<String>,
     pub target: TargetSelector,
+    /// Relay `/travel` and `/zaap` to every open client of the target's process,
+    /// not only the selected one. Flipped from the tray menu; items are never
+    /// broadcast, since they land in whatever field the main client has open.
+    pub multi_account: bool,
     pub commands: EnabledCommands,
     pub send_sequence: Vec<SendStep>,
     /// What an item name gets instead of `send_sequence`: a paste into whatever
@@ -51,6 +55,7 @@ impl Default for Config {
             enabled: true,
             source_processes: Vec::new(),
             target: TargetSelector::default(),
+            multi_account: false,
             commands: EnabledCommands::default(),
             send_sequence: default_send_sequence(),
             paste_sequence: default_paste_sequence(),
