@@ -47,16 +47,32 @@ pub enum GameCommand {
         x: i32,
         y: i32,
     },
-    /// Teleport to the zaap nearest `x,y`. Guides may chain a `/travel` for the
-    /// last leg, which the game runs once the teleport lands.
+    /// Teleport to the zaap nearest `x,y`. Guides chain further `/zaap` and
+    /// `/travel` legs behind it, which the game runs one after the other.
     Zaap {
         x: i32,
         y: i32,
-        then: Option<(i32, i32)>,
+        then: Vec<Leg>,
     },
     Item {
         name: String,
     },
+}
+
+/// One leg of a chain that follows the first `/zaap`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Leg {
+    Travel { x: i32, y: i32 },
+    Zaap { x: i32, y: i32 },
+}
+
+impl fmt::Display for Leg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Leg::Travel { x, y } => write!(f, "/travel {x} {y}"),
+            Leg::Zaap { x, y } => write!(f, "/zaap {x} {y}"),
+        }
+    }
 }
 
 impl GameCommand {
@@ -75,12 +91,13 @@ impl GameCommand {
     pub fn canonical(&self) -> String {
         match self {
             GameCommand::Travel { x, y } => format!("/travel {x},{y}"),
-            GameCommand::Zaap { x, y, then: None } => format!("/zaap {x} {y}"),
-            GameCommand::Zaap {
-                x,
-                y,
-                then: Some((tx, ty)),
-            } => format!("/zaap {x} {y} ; /travel {tx} {ty}"),
+            GameCommand::Zaap { x, y, then } => {
+                let mut line = format!("/zaap {x} {y}");
+                for leg in then {
+                    line.push_str(&format!(" ; {leg}"));
+                }
+                line
+            }
             GameCommand::Item { name } => name.clone(),
         }
     }
@@ -159,19 +176,21 @@ fn parse_coordinates(args: &str, verb: Verb) -> Result<(i32, i32), Rejection> {
     Ok((x, y))
 }
 
-/// `/zaap x y`, optionally chained with `; /travel x y` — and nothing else may
-/// follow the `;`, since the game runs whatever command sits there.
+/// `/zaap x y`, optionally chained with further `; /zaap x y` and
+/// `; /travel x y` legs — and nothing else may follow a `;`, since the game runs
+/// whatever command sits there. The length cap bounds the chain.
 fn parse_zaap(args: &str) -> Result<GameCommand, Rejection> {
-    let (head, tail) = match args.split_once(';') {
-        Some((head, tail)) => (head, Some(tail)),
-        None => (args, None),
-    };
+    let bad = || Rejection::BadArguments { verb: Verb::Zaap };
+    let mut segments = args.split(';');
+    let head = segments.next().unwrap_or_default();
     let (x, y) = parse_coordinates(head.trim(), Verb::Zaap)?;
-    let then = match tail.map(parse) {
-        None => None,
-        Some(Ok(GameCommand::Travel { x, y })) => Some((x, y)),
-        Some(_) => return Err(Rejection::BadArguments { verb: Verb::Zaap }),
-    };
+    let then = segments
+        .map(|segment| match parse(segment) {
+            Ok(GameCommand::Travel { x, y }) => Ok(Leg::Travel { x, y }),
+            Ok(GameCommand::Zaap { x, y, then }) if then.is_empty() => Ok(Leg::Zaap { x, y }),
+            _ => Err(bad()),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(GameCommand::Zaap { x, y, then })
 }
 
@@ -308,7 +327,7 @@ mod tests {
             Ok(GameCommand::Zaap {
                 x: 5,
                 y: 7,
-                then: None
+                then: vec![]
             })
         );
         let chained = parse("/zaap -31 -56 ; /travel -32 -57").unwrap();
@@ -317,7 +336,24 @@ mod tests {
             GameCommand::Zaap {
                 x: -31,
                 y: -56,
-                then: Some((-32, -57))
+                then: vec![Leg::Travel { x: -32, y: -57 }]
+            }
+        );
+        assert_eq!(parse(&chained.canonical()), Ok(chained));
+    }
+
+    #[test]
+    fn accepts_a_chain_of_zaap_and_travel_legs() {
+        let chained = parse("/zaap 5 -18 ; /zaap 5 -18 ; /travel 3 -17").unwrap();
+        assert_eq!(
+            chained,
+            GameCommand::Zaap {
+                x: 5,
+                y: -18,
+                then: vec![
+                    Leg::Zaap { x: 5, y: -18 },
+                    Leg::Travel { x: 3, y: -17 }
+                ]
             }
         );
         assert_eq!(parse(&chained.canonical()), Ok(chained));
@@ -330,8 +366,8 @@ mod tests {
             "/zaap Astrub",
             "/zaap 1 2 ;",
             "/zaap 1 2 ; /who",
-            "/zaap 1 2 ; /zaap 3 4",
-            "/zaap 1 2 ; /travel 3 4 ; /travel 5 6",
+            "/zaap 1 2 ; ; /travel 3 4",
+            "/zaap 1 2 ; /travel 3 4 ; /who",
             "/zaap 1 2 ; Bottes",
             "/zaap 99999 0",
         ] {
