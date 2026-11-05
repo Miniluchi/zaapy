@@ -581,3 +581,27 @@ fn an_item_name_is_never_broadcast() {
 
     assert_eq!(rig.windows.focus_calls(), vec![DOFUS]);
 }
+
+#[test]
+fn multi_account_only_reaches_the_chosen_clients() {
+    let rig = MockRig::new(vec![
+        window(GANYMEDE, "Ganymede.exe", "Ganymède"),
+        window(DOFUS, "Dofus.exe", "Miniluchi - Dofus 3.0"),
+        window(ALT, "Dofus.exe", "Alt - Dofus 3.0"),
+        window(5, "Dofus.exe", "Third - Dofus 3.0"),
+    ]);
+    let mut bridge = Bridge::new(
+        rig.ports(),
+        Config {
+            multi_targets: Some(vec!["third".to_string()]),
+            ..multi_config()
+        },
+    );
+    rig.windows.set_foreground(Some(GANYMEDE));
+    bridge.tick();
+
+    rig.clipboard.copy("/travel 1,2");
+    bridge.tick().unwrap();
+
+    assert_eq!(rig.windows.focus_calls(), vec![5, DOFUS]);
+}

@@ -28,6 +28,33 @@
     selectedSource === "" || sourceOptions.some((w) => w.process === selectedSource),
   );
 
+  /// The other open clients of the selected Dofus process, one per character.
+  const otherClients = $derived(
+    status?.target
+      ? windows
+          .filter(
+            (w) =>
+              w.process.toLowerCase() === status!.target!.process.toLowerCase() &&
+              w.handle !== status!.target!.handle,
+          )
+          .map((w) => w.title.split(" - ")[0].trim())
+      : [],
+  );
+
+  function isChosen(name: string): boolean {
+    const chosen = config?.multi_targets;
+    return !chosen || chosen.some((n) => n.toLowerCase() === name.toLowerCase());
+  }
+
+  function toggleClient(name: string, on: boolean) {
+    if (!config) return;
+    // Spelled out the first time anything is unticked: from then on the list is
+    // the user's, not "whatever is open".
+    const current = otherClients.filter(isChosen);
+    const next = on ? [...new Set([...current, name])] : current.filter((n) => n !== name);
+    void save({ ...config, multi_targets: next });
+  }
+
   const chatKeyLabel = $derived(keyLabel(config ? chatOpenKey(config) : null));
 
   const targetLabel = $derived(
@@ -312,6 +339,25 @@
         Multi-account
       </label>
     </div>
+    {#if config.multi_account}
+      <div class="row">
+        <span class="label">Send to</span>
+        <div class="clients">
+          {#each otherClients as name (name)}
+            <label class="check">
+              <input
+                type="checkbox"
+                checked={isChosen(name)}
+                onchange={(event) => toggleClient(name, event.currentTarget.checked)}
+              />
+              {name}
+            </label>
+          {:else}
+            <span class="hint">No other Dofus window is open</span>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     <hr />
 

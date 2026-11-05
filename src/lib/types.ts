@@ -19,6 +19,8 @@ export interface Config {
   target: TargetSelector;
   // Relay /travel and /zaap to every client of the target's process. Tray-only.
   multi_account: boolean;
+  // Characters a multi-account relay reaches besides the selected one; null = all.
+  multi_targets: string[] | null;
   commands: { travel: boolean; zaap: boolean; items: boolean };
   // Only its first key reaches the settings panel — see `chatOpenKey`. The rest
   // is editable in the config file if Dofus ever needs a different sequence.

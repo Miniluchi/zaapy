@@ -283,6 +283,12 @@ impl Bridge {
             .into_iter()
             .filter(|window| window.process_matches(&self.config.target.process))
             .filter(|window| window.handle != main.handle)
+            .filter(|window| match &self.config.multi_targets {
+                None => true,
+                Some(chosen) => chosen.iter().any(|name| {
+                    name.eq_ignore_ascii_case(crate::config::character_name(&window.title))
+                }),
+            })
             .collect();
         targets.push(main);
         targets

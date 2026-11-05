@@ -127,7 +127,7 @@ It is off by default, because with the chat closed `Escape` opens the game menu.
 
 ## The settings panel
 
-A fixed 420×436 window, hidden at launch and opened from the tray, because in
+A fixed 420×480 window, hidden at launch and opened from the tray, because in
 normal use there is nothing to look at. Not resizable: there is nothing to reveal
 by dragging an edge, and the width is load-bearing — each setting is one line,
 and the labels and hints are written to fit the space 420px leaves them.

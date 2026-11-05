@@ -36,6 +36,9 @@ pub struct Config {
     /// not only the selected one. Flipped from the tray menu; items are never
     /// broadcast, since they land in whatever field the main client has open.
     pub multi_account: bool,
+    /// Which other clients a multi-account relay reaches, by character name — the
+    /// part of the window title before ` - `. `None` means every open client.
+    pub multi_targets: Option<Vec<String>>,
     pub commands: EnabledCommands,
     pub send_sequence: Vec<SendStep>,
     /// What an item name gets instead of `send_sequence`: a paste into whatever
@@ -56,6 +59,7 @@ impl Default for Config {
             source_processes: Vec::new(),
             target: TargetSelector::default(),
             multi_account: false,
+            multi_targets: None,
             commands: EnabledCommands::default(),
             send_sequence: default_send_sequence(),
             paste_sequence: default_paste_sequence(),
@@ -102,6 +106,11 @@ impl Config {
     pub fn is_configured(&self) -> bool {
         !self.source_processes.is_empty() && !self.target.process.trim().is_empty()
     }
+}
+
+/// The character a Dofus window belongs to: its title reads `Name - Class - …`.
+pub fn character_name(title: &str) -> &str {
+    title.split(" - ").next().unwrap_or(title).trim()
 }
 
 /// How the target window is remembered between sessions.
