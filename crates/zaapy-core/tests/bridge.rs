@@ -542,7 +542,7 @@ fn multi_account_relays_a_command_to_every_client_main_last() {
     rig.windows.set_foreground(Some(GANYMEDE));
     bridge.tick();
 
-    rig.clipboard.copy("/travel 3 -17");
+    rig.clipboard.copy("/zaap 3 -17");
     let report = bridge.tick().unwrap();
 
     assert!(matches!(report.outcome, Outcome::Sent { .. }), "{report:?}");
@@ -563,7 +563,20 @@ fn without_multi_account_only_the_selected_client_gets_the_command() {
     rig.windows.set_foreground(Some(GANYMEDE));
     bridge.tick();
 
-    rig.clipboard.copy("/travel 1,2");
+    rig.clipboard.copy("/zaap 1 2");
+    bridge.tick().unwrap();
+
+    assert_eq!(rig.windows.focus_calls(), vec![DOFUS]);
+}
+
+#[test]
+fn a_travel_is_left_to_the_group_leader() {
+    let rig = MockRig::new(two_clients());
+    let mut bridge = Bridge::new(rig.ports(), multi_config());
+    rig.windows.set_foreground(Some(GANYMEDE));
+    bridge.tick();
+
+    rig.clipboard.copy("/travel 3 -17");
     bridge.tick().unwrap();
 
     assert_eq!(rig.windows.focus_calls(), vec![DOFUS]);
@@ -600,7 +613,7 @@ fn multi_account_only_reaches_the_chosen_clients() {
     rig.windows.set_foreground(Some(GANYMEDE));
     bridge.tick();
 
-    rig.clipboard.copy("/travel 1,2");
+    rig.clipboard.copy("/zaap 1 2");
     bridge.tick().unwrap();
 
     assert_eq!(rig.windows.focus_calls(), vec![5, DOFUS]);

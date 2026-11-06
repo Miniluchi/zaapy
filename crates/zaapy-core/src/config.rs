@@ -32,9 +32,10 @@ pub struct Config {
     /// product rests on.
     pub source_processes: Vec<String>,
     pub target: TargetSelector,
-    /// Relay `/travel` and `/zaap` to every open client of the target's process,
-    /// not only the selected one. Flipped from the tray menu; items are never
-    /// broadcast, since they land in whatever field the main client has open.
+    /// Relay `/zaap` to every open client of the target's process, not only the
+    /// selected one. Flipped from the tray menu. `/travel` is not relayed — a
+    /// group follows its leader on its own — and neither are items, which land in
+    /// whatever field the main client has open.
     pub multi_account: bool,
     /// Which other clients a multi-account relay reaches, by character name — the
     /// part of the window title before ` - `. `None` means every open client.

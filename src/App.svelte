@@ -326,7 +326,7 @@
     <div class="row">
       <span
         class="label"
-        title="Send /travel and /zaap to every open Dofus window, your selected character last. Item names still go to the selected character only."
+        title="Send /zaap to every open Dofus window, your selected character last. /travel and item names go to the selected character only — a group follows its leader."
       >
         Accounts <span class="info" aria-hidden="true">i</span>
       </span>

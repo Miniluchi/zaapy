@@ -238,10 +238,13 @@ impl Bridge {
         };
 
         // An item name is pasted where the game's focus already is, so it only
-        // ever goes to the main client; everything else goes through the chat.
+        // ever goes to the main client. A `/travel` does too: a group follows its
+        // leader on its own. A zaap is the one command each account has to take
+        // for itself, so only that one is relayed to the others.
         let (steps, targets) = match command {
             GameCommand::Item { .. } => (&self.config.paste_sequence, vec![main]),
-            _ => (&self.config.send_sequence, self.relay_targets(main)),
+            GameCommand::Travel { .. } => (&self.config.send_sequence, vec![main]),
+            GameCommand::Zaap { .. } => (&self.config.send_sequence, self.relay_targets(main)),
         };
 
         // Every client is tried even if one fails, so a stuck account does not
