@@ -15,6 +15,10 @@ use crate::updater;
 /// apart the moment either one is used.
 pub struct BridgeToggle<R: TauriRuntime>(pub CheckMenuItem<R>);
 
+/// The tray's copy of the multi-account switch, kept in state for the same
+/// reason as [`BridgeToggle`].
+pub struct MultiToggle<R: TauriRuntime>(pub CheckMenuItem<R>);
+
 /// Kept so the updater can add its item once it knows there is something to offer.
 pub struct TrayMenu<R: TauriRuntime>(pub Menu<R>);
 
@@ -30,12 +34,21 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
         enabled_now,
         None::<&str>,
     )?;
+    let multi = CheckMenuItem::with_id(
+        app,
+        "multi",
+        "Multi-account",
+        true,
+        app.state::<Runtime>().config().multi_account,
+        None::<&str>,
+    )?;
     let quit = MenuItem::with_id(app, "quit", "Quit Zaapy", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
             &settings,
             &enabled,
+            &multi,
             &PredefinedMenuItem::separator(app)?,
             &quit,
         ],
@@ -52,6 +65,7 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let icon = tauri::include_image!("icons/tray.png");
 
     let toggle = enabled.clone();
+    let multi_toggle = multi.clone();
     let builder = TrayIconBuilder::with_id("zaapy")
         .tooltip("Zaapy")
         .icon(icon)
@@ -66,12 +80,20 @@ pub fn build<R: TauriRuntime>(app: &AppHandle<R>) -> tauri::Result<()> {
                     tracing::error!(%error, "could not persist the bridge switch");
                 }
             }
+            "multi" => {
+                let mut config = app.state::<Runtime>().config();
+                config.multi_account = multi_toggle.is_checked().unwrap_or(!config.multi_account);
+                if let Err(error) = runtime::apply_config(app, config) {
+                    tracing::error!(%error, "could not persist the multi-account switch");
+                }
+            }
             updater::MENU_ID => updater::install(app),
             "quit" => app.exit(0),
             other => tracing::debug!(id = other, "unhandled tray menu item"),
         });
 
     app.manage(BridgeToggle(enabled));
+    app.manage(MultiToggle(multi));
     app.manage(TrayMenu(menu));
     builder.build(app)?;
     Ok(())

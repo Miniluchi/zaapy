@@ -17,7 +17,7 @@ use zaapy_core::command::Rejection;
 use zaapy_core::platform::WindowRef;
 use zaapy_core::{Bridge, Config, Verb, TICK_INTERVAL_MS};
 
-use crate::tray::BridgeToggle;
+use crate::tray::{BridgeToggle, MultiToggle};
 
 /// Broadcast to the settings page whenever the configuration changes, whoever
 /// changed it.
@@ -113,9 +113,13 @@ pub fn apply_config<R: TauriRuntime>(app: &AppHandle<R>, config: Config) -> Resu
     // arriving from the webview does not run on it.
     let handle = app.clone();
     let checked = saved.enabled;
+    let multi = saved.multi_account;
     let _ = app.run_on_main_thread(move || {
         if let Some(toggle) = handle.try_state::<BridgeToggle<R>>() {
             let _ = toggle.0.set_checked(checked);
+        }
+        if let Some(toggle) = handle.try_state::<MultiToggle<R>>() {
+            let _ = toggle.0.set_checked(multi);
         }
     });
 

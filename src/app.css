@@ -99,6 +99,15 @@ hr {
   color: GrayText;
 }
 
+/* The characters a multi-account relay reaches: as many as there are open
+   clients, so they wrap rather than push the window wider. */
+.clients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  min-width: 0;
+}
+
 .hint {
   color: GrayText;
   font-size: 0.85em;
